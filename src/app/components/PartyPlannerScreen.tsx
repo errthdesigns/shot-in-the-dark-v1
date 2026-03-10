@@ -106,9 +106,7 @@ interface Step {
 const STEPS: Step[] = [
   // 0 — guest question
   { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 1 — visuals spawn; auto-advance to date question
-  { aiText: "The game works best with 6+ guests...", aiY: 85, userText: "", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 2 — date/time question
+  // 1 — date/time question
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 3 — confirmation with tiles
   { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
@@ -145,8 +143,8 @@ const STEPS: Step[] = [
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 11;
-const COCKTAIL_REVEAL_STEP = 15;
+const BOTTLE_RESPONSE_STEP = 10;
+const COCKTAIL_REVEAL_STEP = 14;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
@@ -238,6 +236,20 @@ function Waveform() {
 // ─── Cursor blink ─────────────────────────────────────────────────────���───────
 function Cursor() {
   return <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />;
+}
+
+// Highlight keywords like "strong" in orange within user text
+function UserText({ text }: { text: string }) {
+  const parts = text.split(/(strong)/gi);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^strong$/i.test(part)
+          ? <span key={i} style={{ color: "#F97316" }}>{part}</span>
+          : part
+      )}
+    </>
+  );
 }
 
 // ─── Blur-reveal text ─────────────────────────────────────────────────────────
@@ -937,7 +949,7 @@ export function PartyPlannerScreen() {
                     <div style={{ flexShrink: 0, width: 6, height: 6, borderRadius: "50%", backgroundColor: "#e5311c", animation: "voicePulse 0.65s ease-in-out infinite" }} />
                   )}
                   <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", lineHeight: 1.5, margin: 0, textAlign: "center", flex: 1 }}>
-                    {userDisplay}{isUserTyping && <Cursor />}
+                    <UserText text={userDisplay} />{isUserTyping && <Cursor />}
                   </p>
                 </>
               )}
@@ -1024,7 +1036,7 @@ export function PartyPlannerScreen() {
                   )}
                 </AnimatePresence>
                 <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", textAlign: "center", lineHeight: 1.5, margin: 0, flex: 1 }}>
-                  {userDisplay}{isUserTyping && <Cursor />}
+                  <UserText text={userDisplay} />{isUserTyping && <Cursor />}
                 </p>
               </div>
             )}

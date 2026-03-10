@@ -3,6 +3,9 @@ import imgCristalino from "../../assets/bottle-cristalino.gif";
 import imgReposado   from "../../assets/bottle-reposado.gif";
 import imgBlanco     from "../../assets/bottle-blanco.gif";
 
+// Only reposado is available in this demo
+const SELECTABLE_ID = "reposado";
+
 export interface BottleData {
   id: string;
   name: string;
@@ -48,11 +51,26 @@ interface Props {
 export function BottleSelector({ onSelect }: Props) {
   const [activePage, setActivePage] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Track scroll position at pointer-down to distinguish swipe from tap
+  const pointerDownScrollX = useRef(0);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
-    const page = Math.round(scrollRef.current.scrollLeft / 402);
+    const page = Math.round(scrollRef.current.scrollLeft / scrollRef.current.offsetWidth);
     setActivePage(Math.min(Math.max(page, 0), BOTTLES.length - 1));
+  };
+
+  const handlePointerDown = () => {
+    pointerDownScrollX.current = scrollRef.current?.scrollLeft ?? 0;
+  };
+
+  const handleCardClick = (bottleId: string) => {
+    // If scroll moved more than 5px since pointer-down, it was a swipe — ignore
+    const scrolled = Math.abs((scrollRef.current?.scrollLeft ?? 0) - pointerDownScrollX.current);
+    if (scrolled > 5) return;
+    // Only the selectable bottle triggers onSelect
+    if (bottleId !== SELECTABLE_ID) return;
+    onSelect(bottleId);
   };
 
   return (
@@ -62,6 +80,7 @@ export function BottleSelector({ onSelect }: Props) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
+        onPointerDown={handlePointerDown}
         style={{
           display: "flex",
           width: "100%",
@@ -73,77 +92,104 @@ export function BottleSelector({ onSelect }: Props) {
           msOverflowStyle: "none" as never,
         }}
       >
-        {BOTTLES.map((bottle) => (
-          <div
-            key={bottle.id}
-            onClick={() => onSelect(bottle.id)}
-            style={{
-              flexShrink: 0,
-              width: "100%",
-              height: "100%",
-              scrollSnapAlign: "start",
-              position: "relative",
-              cursor: "pointer",
-            }}
-          >
-            {/* GIF background */}
-            <img
-              src={GIF_MAP[bottle.id]}
-              alt={bottle.name}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
-            />
+        {BOTTLES.map((bottle) => {
+          const selectable = bottle.id === SELECTABLE_ID;
+          return (
+            <div
+              key={bottle.id}
+              onClick={() => handleCardClick(bottle.id)}
+              style={{
+                flexShrink: 0,
+                width: "100%",
+                height: "100%",
+                scrollSnapAlign: "start",
+                position: "relative",
+                cursor: selectable ? "pointer" : "default",
+              }}
+            >
+              {/* GIF background */}
+              <img
+                src={GIF_MAP[bottle.id]}
+                alt={bottle.name}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
+              />
 
-            {/* Gradient overlay */}
-            <div style={{
-              position: "absolute", inset: 0, pointerEvents: "none",
-              background: bottle.darkText
-                ? "linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)"
-                : "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)",
-            }} />
+              {/* Gradient overlay */}
+              <div style={{
+                position: "absolute", inset: 0, pointerEvents: "none",
+                background: bottle.darkText
+                  ? "linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)"
+                  : "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)",
+              }} />
 
-            {/* Bottle name + brand */}
-            <div style={{ position: "absolute", top: 64, left: 28, pointerEvents: "none" }}>
-              <p style={{
-                fontFamily: "Spectral, serif",
-                fontWeight: 700,
-                fontSize: 44,
-                color: bottle.darkText ? "#0c0c0c" : "white",
-                lineHeight: 1.0,
-                margin: 0,
-                letterSpacing: -1.4,
-              }}>
-                {bottle.name}
-              </p>
-              <p style={{
-                fontFamily: "Inter, sans-serif",
-                fontWeight: 400,
-                fontStyle: "italic",
-                fontSize: 13,
-                color: bottle.darkText ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)",
-                margin: "7px 0 0",
-                letterSpacing: 0.6,
-              }}>
-                {bottle.brand}
-              </p>
+              {/* Dim overlay for non-selectable bottles */}
+              {!selectable && (
+                <div style={{
+                  position: "absolute", inset: 0, pointerEvents: "none",
+                  background: "rgba(0,0,0,0.45)",
+                }} />
+              )}
+
+              {/* Bottle name + brand */}
+              <div style={{ position: "absolute", top: 64, left: 28, pointerEvents: "none" }}>
+                <p style={{
+                  fontFamily: "Spectral, serif",
+                  fontWeight: 700,
+                  fontSize: 44,
+                  color: bottle.darkText ? "#0c0c0c" : "white",
+                  lineHeight: 1.0,
+                  margin: 0,
+                  letterSpacing: -1.4,
+                  opacity: selectable ? 1 : 0.5,
+                }}>
+                  {bottle.name}
+                </p>
+                <p style={{
+                  fontFamily: "Inter, sans-serif",
+                  fontWeight: 400,
+                  fontStyle: "italic",
+                  fontSize: 13,
+                  color: bottle.darkText ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)",
+                  margin: "7px 0 0",
+                  letterSpacing: 0.6,
+                  opacity: selectable ? 1 : 0.5,
+                }}>
+                  {bottle.brand}
+                </p>
+              </div>
+
+              {/* Blurb — bottom of card */}
+              <div style={{ position: "absolute", bottom: 108, left: 28, right: 28, pointerEvents: "none" }}>
+                {selectable ? (
+                  <p style={{
+                    fontFamily: "Spectral, serif",
+                    fontWeight: 400,
+                    fontStyle: "italic",
+                    fontSize: 16,
+                    color: "rgba(255,255,255,0.85)",
+                    lineHeight: 1.55,
+                    margin: 0,
+                    whiteSpace: "pre-wrap",
+                  }}>
+                    {bottle.blurb}
+                  </p>
+                ) : (
+                  <p style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontWeight: 500,
+                    fontSize: 11,
+                    color: "rgba(255,255,255,0.4)",
+                    margin: 0,
+                    letterSpacing: 1.8,
+                    textTransform: "uppercase",
+                  }}>
+                    Coming soon
+                  </p>
+                )}
+              </div>
             </div>
-
-            {/* Blurb — bottom of card */}
-            <div style={{ position: "absolute", bottom: 108, left: 28, right: 28, pointerEvents: "none" }}>
-              <p style={{
-                fontFamily: "Spectral, serif",
-                fontWeight: 400,
-                fontStyle: "italic",
-                fontSize: 16,
-                color: "rgba(255,255,255,0.85)",
-                lineHeight: 1.55,
-                margin: 0,
-                whiteSpace: "pre-wrap",
-              }}>
-                {bottle.blurb}
-              </p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Page dots ── */}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { speakText, stopSpeech, unlockAudio } from "../services/elevenlabs";
+import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
@@ -122,8 +122,8 @@ const STEPS: Step[] = [
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1800 },
   // 9 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
   { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10 — bottle selector: user taps a bottle to advance
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select", noVoice: true },
+  // 10 — bottle selector: AI speaks while user chooses; tapping a bottle advances
+  { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 11 — dynamic bottle selection response (text set via getAiText); then ask flavour
   { aiText: "", aiY: 85, userText: "something fruity, maybe strong?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 12 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
@@ -642,7 +642,10 @@ export function PartyPlannerScreen() {
   };
 
   const handleContinue = () => {
-    if (current.view === "email" && lastEmail) setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    if (current.view === "email" && lastEmail) {
+      // Wait for any ongoing voice line to finish before advancing so it isn't cut off
+      getSpeechPromise().then(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)));
+    }
   };
 
   // Direct step jump for the "Continue with Apple Pay" button (bypasses mic cycle)
@@ -996,16 +999,16 @@ export function PartyPlannerScreen() {
 
       {/* ── Ambient glow while AI types (hidden on cocktail-video) ──────────────── */}
       <AnimatePresence>
-        {phase === "ai_typing" && current.imgState !== "cocktail-video" && (
+        {phase === "ai_typing" && current.imgState !== "cocktail-video" && !isBottleSelect && (
           <motion.div key="glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
             style={{ position: "absolute", left: "50%", top: current.aiY, transform: "translate(-50%,-50%)", width: 320, height: 120, borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,255,255,0.045) 0%, transparent 70%)", pointerEvents: "none" }}
           />
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on cocktail-video so the video has no overlaid copy) ── */}
+      {/* ── AI text (hidden on cocktail-video and bottle-select; voice plays but no overlay) ── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && (
+        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && !isBottleSelect && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={isEmailStep

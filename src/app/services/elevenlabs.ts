@@ -9,6 +9,7 @@ let _abort: AbortController | null = null;
 let _resolve: (() => void) | null = null;
 let _audioCtx: AudioContext | null = null;
 let _analyser: AnalyserNode | null = null;
+let _currentSpeechPromise: Promise<void> = Promise.resolve();
 
 function getEl(): HTMLAudioElement {
   if (!_el) { _el = new Audio(); _el.crossOrigin = "anonymous"; }
@@ -45,6 +46,12 @@ export function stopSpeech(): void {
   if (_abort) { _abort.abort(); _abort = null; }
   const el = getEl(); el.onended = null; el.onerror = null; el.pause(); el.src = ""; revokeCurrent();
   if (_resolve) { _resolve(); _resolve = null; }
+  _currentSpeechPromise = Promise.resolve();
+}
+
+/** Returns a promise that resolves when the current TTS utterance finishes (or immediately if idle). */
+export function getSpeechPromise(): Promise<void> {
+  return _currentSpeechPromise;
 }
 // Wrap plain text in SSML that locks in a slow, deep, measured delivery.
 // - <prosody> lowers pitch by 2 semitones and slows rate to 90%
@@ -71,7 +78,7 @@ export async function speakText(text: string): Promise<void> {
   const myGen = _gen;
   const controller = new AbortController();
   _abort = controller;
-  return new Promise<void>(async (resolve) => {
+  const p = new Promise<void>(async (resolve) => {
     _resolve = resolve;
     try {
       const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
@@ -94,4 +101,6 @@ export async function speakText(text: string): Promise<void> {
       if (_gen === myGen) { resolve(); _resolve = null; }
     }
   });
+  _currentSpeechPromise = p;
+  return p;
 }

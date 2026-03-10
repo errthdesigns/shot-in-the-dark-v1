@@ -7,9 +7,32 @@ let _blobUrl: string | null = null;
 let _gen = 0;
 let _abort: AbortController | null = null;
 let _resolve: (() => void) | null = null;
+let _audioCtx: AudioContext | null = null;
+let _analyser: AnalyserNode | null = null;
+
 function getEl(): HTMLAudioElement {
   if (!_el) { _el = new Audio(); _el.crossOrigin = "anonymous"; }
   return _el;
+}
+
+function ensureAnalyser(): void {
+  if (_analyser) return;
+  try {
+    const el = getEl();
+    _audioCtx = new AudioContext();
+    _analyser = _audioCtx.createAnalyser();
+    _analyser.fftSize = 128;
+    _analyser.smoothingTimeConstant = 0.82;
+    const src = _audioCtx.createMediaElementSource(el);
+    src.connect(_analyser);
+    _analyser.connect(_audioCtx.destination);
+  } catch (e) {
+    console.warn("[EL] analyser setup failed", e);
+  }
+}
+
+export function getAnalyser(): AnalyserNode | null {
+  return _analyser;
 }
 function revokeCurrent() {
   if (_blobUrl) { URL.revokeObjectURL(_blobUrl); _blobUrl = null; }
@@ -25,6 +48,7 @@ export function stopSpeech(): void {
 }
 export async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
+  ensureAnalyser();
   stopSpeech();
   const myGen = _gen;
   const controller = new AbortController();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { speakText, stopSpeech } from "../services/elevenlabs";
+import { speakText, stopSpeech, getAnalyser } from "../services/elevenlabs";
 
 // ── Script ────────────────────────────────────────────────────────────────────
 // Text must exactly match what should be spoken — voice duration drives timing.
@@ -57,6 +57,28 @@ const wordV = {
   },
 };
 
+// ── Gradient blobs ────────────────────────────────────────────────────────────
+
+interface Blob { x: number; y: number; r: number; h: number; s: number; l: number; }
+
+const BLOBS: Blob[] = [
+  { x: 0.18, y: 0.28, r: 0.52, h: 275, s: 72, l: 22 }, // deep violet
+  { x: 0.82, y: 0.62, r: 0.46, h: 340, s: 80, l: 18 }, // crimson wine
+  { x: 0.50, y: 0.82, r: 0.54, h: 24,  s: 90, l: 22 }, // burnt amber
+  { x: 0.12, y: 0.72, r: 0.38, h: 230, s: 70, l: 16 }, // midnight navy
+  { x: 0.88, y: 0.18, r: 0.40, h: 300, s: 78, l: 20 }, // electric purple
+];
+
+// Returns bass / mid / high energy in [0, 1]
+function getAudioLevels(analyser: AnalyserNode): { bass: number; mid: number; high: number } {
+  const data = new Uint8Array(analyser.frequencyBinCount); // 64 bins
+  analyser.getByteFrequencyData(data);
+  const avg = (a: number, b: number) => {
+    let s = 0; for (let i = a; i < b; i++) s += data[i]; return s / ((b - a) * 255);
+  };
+  return { bass: avg(0, 6), mid: avg(6, 24), high: avg(24, 48) };
+}
+
 // ── Component ──────────────────────────────────────────────────────────────────
 
 interface Props { onComplete: () => void; }
@@ -66,6 +88,8 @@ export function IntroScreen({ onComplete }: Props) {
   const [visible, setVisible] = useState(true);
   const cancelledRef = useRef(false);
   const phaseRef     = useRef<"running" | "done">("running");
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const rafRef       = useRef<number>(0);
 
   // ── Voice-driven sequencer ─────────────────────────────────────────────────
   // For each chunk:  speak → wait for audio to end → short pause → hide text
@@ -103,6 +127,52 @@ export function IntroScreen({ onComplete }: Props) {
     }
   };
 
+  // ── Gradient canvas loop ────────────────────────────────────────────────────
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const draw = (t: number) => {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const analyser = getAnalyser();
+      const lvl = analyser ? getAudioLevels(analyser) : { bass: 0, mid: 0, high: 0 };
+      const energyWeights = [lvl.bass, lvl.bass, lvl.mid, lvl.high, lvl.mid];
+
+      BLOBS.forEach((blob, i) => {
+        const drift   = 0.07;
+        const energy  = energyWeights[i];
+        const breathe = 1 + energy * 0.55;
+        const bx = (blob.x + Math.sin(t * 0.00035 + i * 1.31) * drift) * W;
+        const by = (blob.y + Math.cos(t * 0.00028 + i * 0.97) * drift) * H;
+        const br = blob.r * Math.min(W, H) * breathe;
+
+        // Lightness pulses up slightly with energy
+        const l = Math.min(blob.l + energy * 18, 55);
+        const centerColor = `hsla(${blob.h},${blob.s}%,${l}%,0.72)`;
+        const edgeColor   = `hsla(${blob.h},${blob.s}%,${l}%,0)`;
+
+        const grd = ctx.createRadialGradient(bx, by, 0, bx, by, br);
+        grd.addColorStop(0, centerColor);
+        grd.addColorStop(1, edgeColor);
+
+        ctx.beginPath();
+        ctx.arc(bx, by, br, 0, Math.PI * 2);
+        ctx.fillStyle = grd;
+        ctx.fill();
+      });
+
+      rafRef.current = requestAnimationFrame(draw);
+    };
+
+    rafRef.current = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
   // Tap anywhere to skip
   const skip = () => {
     cancelledRef.current = true;
@@ -123,6 +193,19 @@ export function IntroScreen({ onComplete }: Props) {
         cursor: "pointer",
       }}
     >
+      {/* Audio-reactive gradient background */}
+      <canvas
+        ref={canvasRef}
+        width={410}
+        height={882}
+        style={{
+          position: "absolute", inset: 0,
+          width: "100%", height: "100%",
+          pointerEvents: "none",
+          mixBlendMode: "screen",
+        }}
+      />
+
       <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
         {visible && (
           <motion.p

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
+import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
 import { CartScreen } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
@@ -621,6 +622,17 @@ export function PartyPlannerScreen() {
 
   return (
     <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
+
+      {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
+      <AnimatePresence>
+        {!showGallery && current.imgState !== "cocktail-video" && current.view === "chat" && (
+          <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
+            style={{ position: "absolute", inset: 0 }}
+          >
+            <AudioReactiveGradient />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── 3-D gallery ────────────────────────────────────────────────────── */}
       <AnimatePresence>

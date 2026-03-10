@@ -160,32 +160,18 @@ export function BottleSelector({ onSelect }: Props) {
 
               {/* Blurb — bottom of card */}
               <div style={{ position: "absolute", bottom: 108, left: 28, right: 28, pointerEvents: "none" }}>
-                {selectable ? (
-                  <p style={{
-                    fontFamily: "Spectral, serif",
-                    fontWeight: 400,
-                    fontStyle: "italic",
-                    fontSize: 16,
-                    color: "rgba(255,255,255,0.85)",
-                    lineHeight: 1.55,
-                    margin: 0,
-                    whiteSpace: "pre-wrap",
-                  }}>
-                    {bottle.blurb}
-                  </p>
-                ) : (
-                  <p style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontWeight: 500,
-                    fontSize: 11,
-                    color: "rgba(255,255,255,0.4)",
-                    margin: 0,
-                    letterSpacing: 1.8,
-                    textTransform: "uppercase",
-                  }}>
-                    Coming soon
-                  </p>
-                )}
+                <p style={{
+                  fontFamily: "Spectral, serif",
+                  fontWeight: 400,
+                  fontStyle: "italic",
+                  fontSize: 16,
+                  color: selectable ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
+                  lineHeight: 1.55,
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                }}>
+                  {bottle.blurb}
+                </p>
               </div>
             </div>
           );

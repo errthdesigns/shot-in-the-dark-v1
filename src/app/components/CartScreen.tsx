@@ -17,14 +17,27 @@ const ITEM_LABEL: React.CSSProperties = {
   margin: 0,
 };
 
+const PRICE_LABEL: React.CSSProperties = {
+  fontFamily: "Arial, sans-serif",
+  fontStyle: "normal",
+  fontWeight: 500,
+  fontSize: 16,
+  color: "#444",
+  lineHeight: 1.3,
+  margin: 0,
+  marginLeft: "auto",
+  flexShrink: 0,
+};
+
 /** One row with an emoji icon */
-function EmojiRow({ emoji, label }: { emoji: string; label: string }) {
+function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
       <div style={{ flexShrink: 0, width: 58, height: 58, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38 }}>
         {emoji}
       </div>
       <p style={ITEM_LABEL}>{label}</p>
+      <p style={PRICE_LABEL}>{price}</p>
     </div>
   );
 }
@@ -83,9 +96,10 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
             />
           </div>
           <p style={ITEM_LABEL}>Reposado Tequila</p>
+          <p style={PRICE_LABEL}>$54.99</p>
         </div>
 
-        <EmojiRow emoji="🍊" label="Orange Bitters" />
+        <EmojiRow emoji="🍊" label="Orange Bitters" price="$12.99" />
 
         {/* Lime — image */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
@@ -97,10 +111,11 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
             />
           </div>
           <p style={ITEM_LABEL}>Lime</p>
+          <p style={PRICE_LABEL}>$0.99</p>
         </div>
 
-        <EmojiRow emoji="🍫" label="Dark Chocolate Shavings" />
-        <EmojiRow emoji="🌶️" label="Chilli Powder" />
+        <EmojiRow emoji="🍫" label="Dark Chocolate Shavings" price="$4.99" />
+        <EmojiRow emoji="🌶️" label="Chilli Powder" price="$3.99" />
 
         {/* Grapefruit — image */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
@@ -112,19 +127,21 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
             />
           </div>
           <p style={ITEM_LABEL}>Grapefruit</p>
+          <p style={PRICE_LABEL}>$1.99</p>
         </div>
 
-        {/* Alibi — joke item */}
+        {/* Alibi — joke item, $0 */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
           <div style={{ flexShrink: 0, width: 58, height: 58, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34 }}>
             🎭
           </div>
-          <p style={{ ...ITEM_LABEL, color: "#555" }}>
+          <p style={{ ...ITEM_LABEL, color: "#555", flex: 1 }}>
             One Alibi{" "}
             <span style={{ fontSize: 12, color: "#aaa", fontStyle: "normal" }}>
               complimentary — don't ask questions
             </span>
           </p>
+          <p style={{ ...PRICE_LABEL, color: "#aaa" }}>$0.00</p>
         </div>
       </div>
 
@@ -135,7 +152,7 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
         {/* Total row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>TOTAL</p>
-          <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>$0.00</p>
+          <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>$79.94</p>
         </div>
 
         {/* Checkout */}

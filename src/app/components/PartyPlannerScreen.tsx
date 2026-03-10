@@ -103,47 +103,41 @@ interface Step {
 
 // ─── Conversation script ──────────────────────────────────────────────────────
 const STEPS: Step[] = [
-  // 0
-  { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "3 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 1
-  { aiText: "The game works best with 6+ guests...", aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 2
-  { aiText: "good. Now what date and time are you thinking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 3
-  { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "Yeah, sounds right!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 4 — auto-advance
-  { aiText: "Got it. What's the vibe of the night?", aiY: 85, userText: "", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat", autoAdvance: true, autoAdvanceDelay: 1200 },
-  // 5
-  { aiText: "Casual whodunit?\n1920's Great Gatsby?\nGlamorous Haunted Mansion?", aiY: 85, userText: "yeah, Great Gatsby", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 6 — gatsby reveal, auto-advance
-  { aiText: "A roaring twenties evening.\nProhibition-era glamour.\nI love it.", aiY: 85, userText: "", imgState: "gatsby-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 2600 },
-  // 7 — invite preview: waits for mic tap before revealing invite at step 8
+  // 0 — guest question
+  { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 1 — visuals spawn; auto-advance to date question
+  { aiText: "The game works best with 6+ guests...", aiY: 85, userText: "", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
+  // 2 — date/time question
+  { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 3 — confirmation with tiles
+  { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
+  // 4 — invite preview: waits for mic tap before revealing invite at step 5
   { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 8
+  // 5
   { aiText: "Like it?", aiY: 85, userText: "Yeah, looks great. Lets send them!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "invite" },
-  // 9 — email
+  // 6 — email
   { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
-  // 10 — bridge
+  // 7 — bridge
   { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 11
+  // 8
   { aiText: "Every great mystery has a signature drink.\nSomething that sets the mood before a single word is spoken.\n\nNow tell me: what are you working with\nflavour-wise? What do you like?", aiY: 85, userText: "something fruity, maybe orange", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 12 — keyword reveal
+  // 9 — keyword reveal
   { aiText: "Orange... yes. Something bright, a little citrus...\nmaybe strawberry... a touch of raspberry...\nsomething sweet that lingers...", aiY: 85, userText: "no, I don't like sweet", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 13
+  // 10
   { aiText: "No sweet. Got it.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 900 },
-  // 14 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
+  // 11 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
   { aiText: "...needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 15 — "talking" pops chocolate shavings + dark-spice; accumulates from step 14
+  // 12 — "talking" pops chocolate shavings + dark-spice; accumulates from step 11
   { aiText: "Now we're talking!", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 16 — still building the cocktail; video only fires on step 17
+  // 13 — still building the cocktail; video only fires on step 14
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 17 — orange video reveal: no voice; video plays once with sound, then user can advance
+  // 14 — orange video reveal: no voice; video plays once with sound, then user can advance
   { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous. \nNot sugary. \nWorthy of a 1942 base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
-  // 18 — recipe card with sequential ingredient spawn
+  // 15 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
-  // 19 — shopping cart (mic tap from recipe card advances here)
+  // 16 — shopping cart (mic tap from recipe card advances here)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 20 — apple pay sheet (triggered by "Continue with Apple Pay" button)
+  // 17 — apple pay sheet (triggered by "Continue with Apple Pay" button)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
 
@@ -324,7 +318,7 @@ export function PartyPlannerScreen() {
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [lastEmail, setLastEmail]       = useState("");
   const [revealedKeywords, setRevealedKeywords] = useState<Set<string>>(new Set());
-  // buildKeywords accumulates across steps 15-17 (does NOT reset between them)
+  // buildKeywords accumulates across steps 11-13 (does NOT reset between them)
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
@@ -467,8 +461,8 @@ export function PartyPlannerScreen() {
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 14-16 window (shifted -1 after deleting step 7)
-    if (step < 14 || step > 16) setBuildKeywords(new Set()); // step 16 is last build step
+    // Reset cocktail-build accumulator when leaving the 11-13 window
+    if (step < 11 || step > 13) setBuildKeywords(new Set()); // step 13 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);

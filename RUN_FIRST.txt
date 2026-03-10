@@ -1,0 +1,7 @@
+Before uploading to GitHub, run this from the PARENT folder (Diageo Prototype):
+
+  python3 prepare-upload.py
+
+That fills this folder with the remaining files (components, video, etc.) so the total is under 100 files. Then drag this folder to GitHub.
+
+See UPLOAD_README.txt for full steps.

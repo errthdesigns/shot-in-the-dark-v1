@@ -7,6 +7,7 @@ import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
 import { CartScreen } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
+import { BottleSelector } from "./BottleSelector";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 import imgSafdgdbnf from "figma:asset/46012681f417991ceea5ca1a2a5fe36bc79180ea.png";
 import imgNrhdfbg   from "figma:asset/8ce9e0c9b853ca02b728fcdc542a98bce9a0f680.png";
@@ -89,7 +90,7 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
 type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build" | "cocktail-video";
-type ViewState = "chat" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
+type ViewState = "chat" | "bottle-select" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -119,27 +120,51 @@ const STEPS: Step[] = [
   { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
   // 7 — bridge
   { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 8
-  { aiText: "Every great mystery has a signature drink.\nSomething that sets the mood before a single word is spoken.\n\nNow tell me: what are you working with\nflavour-wise? What do you like?", aiY: 85, userText: "something fruity, maybe orange", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 9 — keyword reveal
-  { aiText: "Orange... yes. Something bright, a little citrus...\nmaybe strawberry... a touch of raspberry...\nsomething sweet that lingers...", aiY: 85, userText: "no, I don't like sweet", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10
-  { aiText: "No sweet. Got it.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 900 },
-  // 11 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
-  { aiText: "...needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 12 — "talking" pops chocolate shavings + dark-spice; accumulates from step 11
+  // 8 — tone intro, auto-advance
+  { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1800 },
+  // 9 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
+  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 10 — bottle selector: user taps a bottle to advance
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select", noVoice: true },
+  // 11 — dynamic bottle selection response (text set via getAiText); then ask flavour
+  { aiText: "", aiY: 85, userText: "something fruity, maybe strong?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 12 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
+  { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 13 — "talking" pops chocolate shavings + dark-spice; accumulates from step 12
   { aiText: "Now we're talking!", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 13 — still building the cocktail; video only fires on step 14
+  // 14 — still building the cocktail; video only fires on step 15
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 14 — orange video reveal: no voice; video plays once with sound, then user can advance
-  { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous. \nNot sugary. \nWorthy of a 1942 base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
-  // 15 — recipe card with sequential ingredient spawn
+  // 15 — orange video reveal: dynamic text names the chosen bottle; no voice
+  { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
+  // 16 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
-  // 16 — shopping cart (mic tap from recipe card advances here)
+  // 17 — shopping cart (mic tap from recipe card advances here)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 17 — apple pay sheet (triggered by "Continue with Apple Pay" button)
+  // 18 — apple pay sheet (triggered by "Continue with Apple Pay" button)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
+
+// ─── Bottle-selection dynamic text ───────────────────────────────────────────
+const BOTTLE_RESPONSE_STEP = 11;
+const COCKTAIL_REVEAL_STEP = 15;
+
+const BOTTLE_RESPONSES: Record<string, string> = {
+  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
+  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.\n\nNow — what are you working with flavour-wise?",
+  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.\n\nNow — what are you working with flavour-wise?",
+};
+
+const BOTTLE_REVEAL_TEXTS: Record<string, string> = {
+  cristalino: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Don Julio 70 Cristalino base.",
+  reposado:   "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.",
+  blanco:     "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Blanco base.",
+};
+
+function resolveAiText(stepIdx: number, bottle: string | null): string {
+  if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
+  if (stepIdx === COCKTAIL_REVEAL_STEP && bottle)  return BOTTLE_REVEAL_TEXTS[bottle] ?? STEPS[stepIdx].aiText;
+  return STEPS[stepIdx].aiText;
+}
 
 const WAVE_H = [7, 14, 20, 11, 22, 9, 17, 13, 21, 8, 16, 12];
 
@@ -318,13 +343,14 @@ export function PartyPlannerScreen() {
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [lastEmail, setLastEmail]       = useState("");
   const [revealedKeywords, setRevealedKeywords] = useState<Set<string>>(new Set());
-  // buildKeywords accumulates across steps 11-13 (does NOT reset between them)
+  // buildKeywords accumulates across steps 12-14 (does NOT reset between them)
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
+  const [selectedBottle, setSelectedBottle] = useState<string | null>(null);
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -461,8 +487,8 @@ export function PartyPlannerScreen() {
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 11-13 window
-    if (step < 11 || step > 13) setBuildKeywords(new Set()); // step 13 is last build step
+    // Reset cocktail-build accumulator when leaving the 12-14 window
+    if (step < 12 || step > 14) setBuildKeywords(new Set()); // step 14 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
@@ -473,7 +499,7 @@ export function PartyPlannerScreen() {
   useEffect(() => {
     if (introActive) return;
     if (phase !== "ai_typing") return;
-    const text  = STEPS[step].aiText;
+    const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
     const myStep = step;
     let i = 0;
@@ -598,6 +624,11 @@ export function PartyPlannerScreen() {
     setPhase("recording");
   };
 
+  const handleBottleSelect = (id: string) => {
+    setSelectedBottle(id);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
   const handleContinue = () => {
     if (current.view === "email" && lastEmail) setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
@@ -611,8 +642,9 @@ export function PartyPlannerScreen() {
   const isThinking  = phase === "thinking";
   const isReady     = phase === "ready";
   const isRecording = phase === "recording" || phase === "transcribing";
-  const isPaymentView = current.view === "cart" || current.view === "apple-pay";
-  const showUserBox = !isPaymentView && isRecording && current.view !== "invite";
+  const isPaymentView   = current.view === "cart" || current.view === "apple-pay";
+  const isBottleSelect  = current.view === "bottle-select";
+  const showUserBox = !isPaymentView && !isBottleSelect && isRecording && current.view !== "invite";
 
   return (
     <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
@@ -716,6 +748,20 @@ export function PartyPlannerScreen() {
       <AnimatePresence>
         {current.view === "apple-pay" && (
           <ApplePaySheet key="apple-pay" />
+        )}
+      </AnimatePresence>
+
+      {/* ── Bottle selector ──────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isBottleSelect && (
+          <motion.div
+            key="bottle-select"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 50 }}
+          >
+            <BottleSelector onSelect={handleBottleSelect} />
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -931,7 +977,7 @@ export function PartyPlannerScreen() {
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isThinking && current.imgState !== "cocktail-video" && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
+        {isThinking && !isBottleSelect && current.imgState !== "cocktail-video" && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
       </AnimatePresence>
 
       {/* ── Ambient glow while AI types (hidden on cocktail-video) ──────────────── */}
@@ -1002,7 +1048,7 @@ export function PartyPlannerScreen() {
 
       {/* ── Ready-pulse ring (hidden on payment views) ───────────────────────── */}
       <AnimatePresence>
-        {isReady && !isPaymentView && (
+        {isReady && !isPaymentView && !isBottleSelect && (
           <motion.div key="ring"
             style={{ position: "absolute", left: 160, top: 759, width: 82, height: 82, borderRadius: 41, border: "1.5px solid rgba(255,255,255,0.28)", pointerEvents: "none" }}
             animate={{ scale: [1, 1.55], opacity: [0.55, 0] }}
@@ -1022,10 +1068,10 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Mic button (hidden on payment views — cart sheet covers this area) ── */}
+      {/* ── Mic button (hidden on payment + bottle-select views) ── */}
       <motion.button
-        onClick={handleMicClick} disabled={!isReady || isPaymentView}
-        style={{ position: "absolute", left: 168, top: 767, width: 66, height: 66, borderRadius: 33, border: "none", cursor: isReady && !isPaymentView ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 22px", boxSizing: "border-box", zIndex: 10, opacity: isPaymentView ? 0 : 1, pointerEvents: isPaymentView ? "none" : undefined }}
+        onClick={handleMicClick} disabled={!isReady || isPaymentView || isBottleSelect}
+        style={{ position: "absolute", left: 168, top: 767, width: 66, height: 66, borderRadius: 33, border: "none", cursor: isReady && !isPaymentView && !isBottleSelect ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 22px", boxSizing: "border-box", zIndex: 10, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}
         animate={{ backgroundColor: phase === "recording" ? "#8B2E2E" : isReady ? ["#383838", "#444", "#383838"] : "#383838", scale: phase === "recording" ? [1, 1.06, 1] : 1 }}
         transition={phase === "recording" ? { scale: { duration: 0.9, repeat: Infinity }, backgroundColor: { duration: 0.3 } } : isReady ? { duration: 2.2, repeat: Infinity } : {}}
         whileHover={isReady ? { scale: 1.08 } : {}} whileTap={isReady ? { scale: 0.88 } : {}}
@@ -1033,9 +1079,9 @@ export function PartyPlannerScreen() {
         <MicIcon />
       </motion.button>
 
-      {/* X + Grid buttons — hidden on payment views */}
-      <div style={{ position: "absolute", left: 107, top: 778, opacity: isPaymentView ? 0 : 1, pointerEvents: isPaymentView ? "none" : undefined, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><XIcon /></div>
-      <div style={{ position: "absolute", left: 250, top: 778, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isPaymentView ? 0 : 1, pointerEvents: isPaymentView ? "none" : undefined }}><GridIcon /></div>
+      {/* X + Grid buttons — hidden on payment + bottle-select views */}
+      <div style={{ position: "absolute", left: 107, top: 778, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><XIcon /></div>
+      <div style={{ position: "absolute", left: 250, top: 778, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}><GridIcon /></div>
 
       {/* ── Step indicator pills ─────────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>

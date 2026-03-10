@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech } from "../services/elevenlabs";
+import { AudioReactiveGradient } from "./AudioReactiveGradient";
 
 // ── Script ────────────────────────────────────────────────────────────────────
 // Text must exactly match what should be spoken — voice duration drives timing.
@@ -123,6 +124,9 @@ export function IntroScreen({ onComplete }: Props) {
         cursor: "pointer",
       }}
     >
+      {/* Audio-reactive gradient background */}
+      <AudioReactiveGradient />
+
       <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
         {visible && (
           <motion.p

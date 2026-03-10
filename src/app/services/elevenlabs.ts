@@ -7,9 +7,32 @@ let _blobUrl: string | null = null;
 let _gen = 0;
 let _abort: AbortController | null = null;
 let _resolve: (() => void) | null = null;
+let _audioCtx: AudioContext | null = null;
+let _analyser: AnalyserNode | null = null;
+
 function getEl(): HTMLAudioElement {
   if (!_el) { _el = new Audio(); _el.crossOrigin = "anonymous"; }
   return _el;
+}
+
+function ensureAnalyser(): void {
+  if (_analyser) return;
+  try {
+    const el = getEl();
+    _audioCtx = new AudioContext();
+    _analyser = _audioCtx.createAnalyser();
+    _analyser.fftSize = 128;
+    _analyser.smoothingTimeConstant = 0.82;
+    const src = _audioCtx.createMediaElementSource(el);
+    src.connect(_analyser);
+    _analyser.connect(_audioCtx.destination);
+  } catch (e) {
+    console.warn("[EL] analyser setup failed", e);
+  }
+}
+
+export function getAnalyser(): AnalyserNode | null {
+  return _analyser;
 }
 function revokeCurrent() {
   if (_blobUrl) { URL.revokeObjectURL(_blobUrl); _blobUrl = null; }
@@ -23,8 +46,27 @@ export function stopSpeech(): void {
   const el = getEl(); el.onended = null; el.onerror = null; el.pause(); el.src = ""; revokeCurrent();
   if (_resolve) { _resolve(); _resolve = null; }
 }
+// Wrap plain text in SSML that locks in a slow, deep, measured delivery.
+// - <prosody> lowers pitch by 2 semitones and slows rate to 90%
+// - Explicit <break> tags after every sentence-ending punctuation and newline
+//   prevent the rushed bursts that cause pitch to spike upward.
+function toSSML(text: string): string {
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  const paced = escaped
+    .replace(/\.\s*/g,  '.<break time="420ms"/> ')
+    .replace(/\?\s*/g,  '?<break time="420ms"/> ')
+    .replace(/!\s*/g,   '!<break time="380ms"/> ')
+    .replace(/,\s*/g,   ',<break time="180ms"/> ')
+    .replace(/\n+/g,    '<break time="650ms"/>');
+  return `<speak><prosody pitch="-2st" rate="90%">${paced}</prosody></speak>`;
+}
+
 export async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
+  ensureAnalyser();
   stopSpeech();
   const myGen = _gen;
   const controller = new AbortController();
@@ -35,7 +77,7 @@ export async function speakText(text: string): Promise<void> {
       const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
         method: "POST", signal: controller.signal,
         headers: { "xi-api-key": API_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.82, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true } }),
+        body: JSON.stringify({ text: toSSML(text), model_id: "eleven_multilingual_v2", voice_settings: { stability: 1.0, similarity_boost: 0.85, style: 0.0, use_speaker_boost: true } }),
       });
       if (_gen !== myGen) { resolve(); return; }
       if (!res.ok) { console.error("[EL] HTTP", res.status); resolve(); _resolve = null; return; }

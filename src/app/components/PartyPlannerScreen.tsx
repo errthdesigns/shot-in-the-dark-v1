@@ -61,15 +61,15 @@ interface CocktailItem {
   cx: number; cy: number;  // explicit wide-spread void positions
 }
 const COCKTAIL_BUILD_ITEMS: CocktailItem[] = [
-  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 133, h: 121, radius:  9.131, rotZ: -3.5, cx:  100, cy: -130 },
-  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  57, h:  69,            rotZ:  5.2, cx:  160, cy:  -55 },
-  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 113, h: 113, radius: 56.5,  rotZ: -6.0, cx:   85, cy:   40 },
-  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 106, h: 131, radius:  9.131, rotZ:  4.0, cx: -110, cy:  -90 },
-  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w:  70, h:  65, radius: 40.604, rotZ: -8.0, cx: -165, cy:    0 },
-  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 160, h:  99, radius:  9.131, rotZ:  3.5, cx:   75, cy:  160 },
-  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 149, h:  83,                  rotZ: -4.0, cx:  -45, cy:  140 },
-  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 110, h: 170, radius:  9.131, rotZ:  6.0, cx: -120, cy:  175 },
-  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  70, h:  43,                  rotZ: -5.5, cx: -162, cy:  120 },
+  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 190, h: 170, radius:  9.131, rotZ: -3.5, cx:   90, cy: -140 },
+  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  65, h:  78,            rotZ:  5.2, cx:  155, cy:  -60 },
+  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 165, h: 165, radius: 82,    rotZ: -6.0, cx:   80, cy:   30 },
+  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 155, h: 190, radius:  9.131, rotZ:  4.0, cx: -105, cy: -100 },
+  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w: 110, h: 100, radius: 55,    rotZ: -8.0, cx: -145, cy:   10 },
+  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 220, h: 140, radius:  9.131, rotZ:  3.5, cx:   65, cy:  150 },
+  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 165, h:  90,                  rotZ: -4.0, cx:  -50, cy:  130 },
+  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 155, h: 240, radius:  9.131, rotZ:  6.0, cx: -105, cy:  155 },
+  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  80, h:  50,                  rotZ: -5.5, cx: -150, cy:  110 },
 ];
 
 // ── Keyword-triggered ingredient images (step 13) ─────────────────────────────
@@ -721,6 +721,8 @@ export function PartyPlannerScreen() {
             transition={{ duration: 0.9, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
           >
+            {/* Solid fallback so it's never pure black while image/video loads */}
+            <div style={{ position: "absolute", inset: 0, backgroundColor: "#3a1500" }} />
             {/* Orange image as fallback below video */}
             <img src={imgVideoFrame} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             {/* Actual video — plays once at full length with volume; no loop so it isn't cut off */}

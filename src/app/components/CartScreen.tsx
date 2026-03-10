@@ -32,6 +32,26 @@ const BTN_LABEL: React.CSSProperties = {
   lineHeight: "22px",
 };
 
+const ITEM_LABEL: React.CSSProperties = {
+  fontFamily: "Arial, sans-serif",
+  fontStyle: "italic",
+  fontSize: 16,
+  color: "#000",
+  lineHeight: 1.3,
+  margin: 0,
+};
+
+function EmojiItem({ emoji, label, top }: { emoji: string; label: string; top: number }) {
+  return (
+    <>
+      <div style={{ position: "absolute", left: 24, top, width: 54, height: 54, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
+        {emoji}
+      </div>
+      <p style={{ ...ITEM_LABEL, position: "absolute", left: 96, top: top + 17 }}>{label}</p>
+    </>
+  );
+}
+
 export function CartScreen({ onApplePay }: CartScreenProps) {
   return (
     <motion.div
@@ -65,54 +85,62 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
       </p>
 
       {/* ── Your Cart header ── */}
-      <p style={{ position: "absolute", left: 24, top: 90, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
+      <p style={{ position: "absolute", left: 24, top: 68, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
         Your Cart
       </p>
 
-      {/* ── Tequila bottle ── */}
-      <div style={{ position: "absolute", left: 24, top: 162, width: 72, height: 126, overflow: "hidden", pointerEvents: "none" }}>
+      {/* ── Tequila bottle (with image) ── */}
+      <div style={{ position: "absolute", left: 24, top: 118, width: 54, height: 90, overflow: "hidden", pointerEvents: "none" }}>
         <img alt="" src={imgTequila} style={{ position: "absolute", height: "113.56%", left: "-28.4%", maxWidth: "none", top: "-6.1%", width: "158.58%" }} />
       </div>
+      <p style={{ ...ITEM_LABEL, position: "absolute", left: 96, top: 155 }}>Reposado Tequila</p>
 
-      {/* ── Lime ── */}
-      <div style={{ position: "absolute", left: 24, top: 328, width: 99, height: 53, overflow: "hidden", pointerEvents: "none" }}>
+      {/* ── Orange Bitters ── */}
+      <EmojiItem emoji="🍊" label="Orange Bitters" top={222} />
+
+      {/* ── Lime (with image) ── */}
+      <div style={{ position: "absolute", left: 24, top: 286, width: 54, height: 40, overflow: "hidden", pointerEvents: "none" }}>
         <img alt="" src={imgLime} style={{ position: "absolute", height: "166.27%", left: "-12.1%", maxWidth: "none", top: "-39.02%", width: "135.03%" }} />
       </div>
+      <p style={{ ...ITEM_LABEL, position: "absolute", left: 96, top: 300 }}>Lime</p>
 
-      {/* ── Grapefruit ── */}
-      <div style={{ position: "absolute", left: 24, top: 424, width: 75, height: 71, overflow: "hidden", pointerEvents: "none" }}>
+      {/* ── Dark Chocolate ── */}
+      <EmojiItem emoji="🍫" label="Dark Chocolate Shavings" top={346} />
+
+      {/* ── Chilli Powder ── */}
+      <EmojiItem emoji="🌶️" label="Chilli Powder" top={410} />
+
+      {/* ── Grapefruit (with image) ── */}
+      <div style={{ position: "absolute", left: 24, top: 470, width: 54, height: 52, overflow: "hidden", pointerEvents: "none" }}>
         <img alt="" src={imgGrapefruit} style={{ position: "absolute", height: "127.45%", left: "-41.18%", maxWidth: "none", top: "-12.75%", width: "182.36%" }} />
       </div>
+      <p style={{ ...ITEM_LABEL, position: "absolute", left: 96, top: 490 }}>Grapefruit</p>
 
-      {/* ── Item labels ── */}
-      <p style={{ position: "absolute", left: 132, top: 225, width: 187, fontFamily: "Arial, sans-serif", fontStyle: "italic", fontSize: 18, color: "#000", lineHeight: 1.4, margin: 0 }}>
-        Reposado Tequlia
-      </p>
-      <p style={{ position: "absolute", left: 132, top: 345, width: 140, fontFamily: "Arial, sans-serif", fontStyle: "italic", fontSize: 18, color: "#000", lineHeight: 1.4, margin: 0 }}>
-        Lime
-      </p>
-      <p style={{ position: "absolute", left: 132, top: 455, width: 140, fontFamily: "Arial, sans-serif", fontStyle: "italic", fontSize: 18, color: "#000", lineHeight: 1.4, margin: 0 }}>
-        Grapefruit
+      {/* ── Alibi (complimentary joke item) ── */}
+      <div style={{ position: "absolute", left: 24, top: 534, width: 54, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🎭</div>
+      <p style={{ ...ITEM_LABEL, position: "absolute", left: 96, top: 542, fontStyle: "italic", color: "#555" }}>
+        One Alibi{"\n"}
+        <span style={{ fontSize: 11, color: "#aaa", fontStyle: "normal" }}>complimentary — don't ask questions</span>
       </p>
 
       {/* ── Separator ── */}
-      <div style={{ position: "absolute", left: 0, right: 0, top: 535, height: 1, backgroundColor: "#e5e5e5" }} />
+      <div style={{ position: "absolute", left: 0, right: 0, top: 596, height: 1, backgroundColor: "#e5e5e5" }} />
 
       {/* ── TOTAL row ── */}
-      <p style={{ position: "absolute", left: 21, top: 558, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
+      <p style={{ position: "absolute", left: 21, top: 616, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
         TOTAL
       </p>
-      <p style={{ position: "absolute", right: 21, top: 558, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
-        $82.99
+      <p style={{ position: "absolute", right: 21, top: 616, fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0, whiteSpace: "nowrap" }}>
+        $0.00
       </p>
 
       {/* ── Checkout button ── */}
-      <button style={{ ...BTN, top: 620 }}>
+      <button style={{ ...BTN, top: 672 }}>
         <span style={BTN_LABEL}>Checkout</span>
       </button>
 
       {/* ── Continue with Apple Pay button ── */}
-      <button onClick={onApplePay} style={{ ...BTN, top: 672 }}>
+      <button onClick={onApplePay} style={{ ...BTN, top: 722 }}>
         <span style={BTN_LABEL}>Continue with Apple Pay</span>
       </button>
     </motion.div>

@@ -125,14 +125,12 @@ const STEPS: Step[] = [
   // 10 — bottle selector: AI speaks while user chooses; tapping a bottle advances
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 11 — dynamic bottle selection response (text set via getAiText); then ask flavour
-  { aiText: "", aiY: 85, userText: "something fruity, maybe strong?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "", aiY: 85, userText: "something fruity, maybe orange?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 12 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
   { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 13 — "talking" pops chocolate shavings + dark-spice; accumulates from step 12
-  { aiText: "Now we're talking!", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 14 — still building the cocktail; video only fires on step 15
+  // 13 — still building; "depth"/"spice" keywords trigger more ingredient tiles
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 15 — orange video reveal: dynamic text names the chosen bottle; no voice
+  // 14 — orange video reveal: dynamic text names the chosen bottle; no voice
   { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
   // 16 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
@@ -144,7 +142,7 @@ const STEPS: Step[] = [
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
 const BOTTLE_RESPONSE_STEP = 10;
-const COCKTAIL_REVEAL_STEP = 14;
+const COCKTAIL_REVEAL_STEP = 13;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
@@ -238,13 +236,13 @@ function Cursor() {
   return <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />;
 }
 
-// Highlight keywords like "strong" in orange within user text
+// Highlight "orange" in orange within user text
 function UserText({ text }: { text: string }) {
-  const parts = text.split(/(strong)/gi);
+  const parts = text.split(/(orange)/gi);
   return (
     <>
       {parts.map((part, i) =>
-        /^strong$/i.test(part)
+        /^orange$/i.test(part)
           ? <span key={i} style={{ color: "#F97316" }}>{part}</span>
           : part
       )}
@@ -499,8 +497,8 @@ export function PartyPlannerScreen() {
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 12-14 window
-    if (step < 12 || step > 14) setBuildKeywords(new Set()); // step 14 is last build step
+    // Reset cocktail-build accumulator when leaving the 12-13 window
+    if (step < 12 || step > 13) setBuildKeywords(new Set()); // step 13 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);

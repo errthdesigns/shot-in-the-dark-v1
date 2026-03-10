@@ -8,9 +8,9 @@ import { getAnalyser } from "../services/elevenlabs";
 interface Blob { x: number; y: number; r: number; h: number; s: number; l: number; px: number; py: number; }
 
 const BLOBS: Blob[] = [
-  { x: 0.62, y: 0.52, r: 0.68, h: 26, s: 92, l:  9, px:  1.31, py:  0.97 }, // main ember
-  { x: 0.26, y: 0.70, r: 0.50, h: 20, s: 88, l:  5, px: -0.85, py:  1.43 }, // coal, lower-left
-  { x: 0.80, y: 0.30, r: 0.40, h: 33, s: 95, l:  6, px:  0.62, py: -1.17 }, // flicker, upper-right
+  { x: 0.55, y: 0.90, r: 0.70, h: 26, s: 92, l:  9, px:  1.31, py:  0.97 }, // main ember, bottom centre
+  { x: 0.22, y: 0.96, r: 0.52, h: 20, s: 88, l:  5, px: -0.85, py:  1.43 }, // coal, bottom left
+  { x: 0.82, y: 0.82, r: 0.42, h: 33, s: 95, l:  6, px:  0.62, py: -1.17 }, // flicker, lower right
 ];
 
 function getAudioLevels(analyser: AnalyserNode) {
@@ -52,12 +52,14 @@ export function AudioReactiveGradient() {
       BLOBS.forEach((blob, i) => {
         const energy = energyWeights[i];
 
-        const ambientX = Math.sin(t * 0.00032 + i * blob.px) * 0.05;
-        const ambientY = Math.cos(t * 0.00025 + i * blob.py) * 0.05;
+        // Lateral sway — minimal vertical ambient drift so blobs stay near the bottom
+        const ambientX = Math.sin(t * 0.00032 + i * blob.px) * 0.04;
+        const ambientY = Math.cos(t * 0.00025 + i * blob.py) * 0.015;
 
-        const dispMag = energy * 0.22;
+        // Horizontal sway + upward-only rise on audio (negative = up on canvas)
+        const dispMag = energy * 0.20;
         const dispX = Math.sin(t * 0.0018 + i * 2.7 + lvl.mid * 3) * dispMag;
-        const dispY = Math.cos(t * 0.0021 + i * 1.9 + lvl.bass * 2) * dispMag;
+        const dispY = -Math.abs(Math.cos(t * 0.0021 + i * 1.9 + lvl.bass * 2)) * dispMag;
 
         const bx = (blob.x + ambientX + dispX) * W;
         const by = (blob.y + ambientY + dispY) * H;
@@ -82,8 +84,8 @@ export function AudioReactiveGradient() {
       // Hot-spot spark tracking high-frequency energy
       if (lvl.high > 0.04) {
         const e = lvl.high;
-        const sx = (0.62 + Math.sin(t * 0.004 + lvl.mid * 5) * 0.18) * W;
-        const sy = (0.50 + Math.cos(t * 0.005 + lvl.bass * 4) * 0.15) * H;
+        const sx = (0.55 + Math.sin(t * 0.004 + lvl.mid * 5) * 0.18) * W;
+        const sy = (0.88 - Math.abs(Math.cos(t * 0.005 + lvl.bass * 4)) * 0.18) * H;
         const sr = 0.12 * Math.min(W, H) * e;
         const sl = Math.min(40 + e * 38, 78);
         const sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);

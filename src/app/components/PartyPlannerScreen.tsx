@@ -10,7 +10,6 @@ import { ApplePaySheet } from "./ApplePaySheet";
 import { BottleSelector } from "./BottleSelector";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 import imgSafdgdbnf from "figma:asset/46012681f417991ceea5ca1a2a5fe36bc79180ea.png";
-import imgNrhdfbg   from "figma:asset/8ce9e0c9b853ca02b728fcdc542a98bce9a0f680.png";
 import imgHrsbgfdxVc from "figma:asset/77f7ee28f0d3c625dd310ec0030c47d3e9d0bd4e.png";
 import img855       from "figma:asset/0338a0f67f0358213e455ae1fd0ede9ca42462d7.png";
 import img833       from "figma:asset/50a297f0102d4387d64592178384a47ae35769dd.png";
@@ -41,7 +40,7 @@ import videoCocktailReveal from "../../assets/Untitled (71).mp4";
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
 import imgGatsbyB from "figma:asset/b700a4bda2ef0ceacaf56b1c8edc736bfaa95522.png";
 
-const PARTY_IMAGES      = [imgSafdgdbnf, imgNrhdfbg, imgHrsbgfdxVc, img855, img833, imgC9556];
+const PARTY_IMAGES      = [imgSafdgdbnf, imgHrsbgfdxVc, img855, img833, imgC9556];
 const DRINK_IMAGES_B    = [imgDrinkD, imgDrinkF, imgDrinkI, imgDrinkJ, imgDrinkK, imgDrinkL];
 // The six Figma-matched spice/bitter images (screen 14/17)
 const DRINK_IMAGES_SPICE = [imgDrinkH, imgDrinkE, imgDrinkB, imgDrinkF, imgDrinkC, imgDrinkG];

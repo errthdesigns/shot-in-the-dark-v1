@@ -40,6 +40,10 @@ function revokeCurrent() {
 }
 export function unlockAudio(): void {
   const el = getEl(); el.src = SILENT_WAV; el.volume = 0; el.play().catch(() => {});
+  // Also resume / create the AudioContext right on user interaction so it's
+  // never in "suspended" state when speakText is called later.
+  ensureAnalyser();
+  _audioCtx?.resume().catch(() => {});
 }
 export function stopSpeech(): void {
   _gen++;
@@ -74,6 +78,10 @@ function toSSML(text: string): string {
 export async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
   ensureAnalyser();
+  // Ensure AudioContext is running — it can be auto-suspended by the browser
+  if (_audioCtx && _audioCtx.state !== "running") {
+    await _audioCtx.resume().catch(() => {});
+  }
   stopSpeech();
   const myGen = _gen;
   const controller = new AbortController();
@@ -94,6 +102,8 @@ export async function speakText(text: string): Promise<void> {
       const el = getEl(); el.volume = 1; el.src = url;
       el.onended = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
       el.onerror = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
+      // Resume AudioContext in case it was suspended (e.g. after a video plays)
+      await _audioCtx?.resume().catch(() => {});
       await el.play();
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;

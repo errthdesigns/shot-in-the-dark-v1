@@ -70,7 +70,9 @@ export function NameScreen({ onComplete }: Props) {
 
     return () => {
       cancelledRef.current = true;
-      stopSpeech();
+      // Do NOT call stopSpeech() here — AnimatePresence keeps NameScreen mounted
+      // for ~700ms exit animation, which would fire this cleanup and kill the
+      // InfoGatherScreen's speakText() fetch that started at t=120ms.
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

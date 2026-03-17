@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.next/
+out/
+
+# lock files (optional — remove if you want to commit these)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# env
+.env
+.env.local
+.env.*.local
+
+# editor
+.DS_Store
+*.swp

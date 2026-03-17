@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { speakText, stopSpeech, unlockAudio } from "../services/elevenlabs";
+import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
+import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
 import { CartScreen } from "./CartScreen";
@@ -10,7 +11,6 @@ import { ApplePaySheet } from "./ApplePaySheet";
 import { BottleSelector } from "./BottleSelector";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 import imgSafdgdbnf from "figma:asset/46012681f417991ceea5ca1a2a5fe36bc79180ea.png";
-import imgNrhdfbg   from "figma:asset/8ce9e0c9b853ca02b728fcdc542a98bce9a0f680.png";
 import imgHrsbgfdxVc from "figma:asset/77f7ee28f0d3c625dd310ec0030c47d3e9d0bd4e.png";
 import img855       from "figma:asset/0338a0f67f0358213e455ae1fd0ede9ca42462d7.png";
 import img833       from "figma:asset/50a297f0102d4387d64592178384a47ae35769dd.png";
@@ -41,7 +41,7 @@ import videoCocktailReveal from "../../assets/Untitled (71).mp4";
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
 import imgGatsbyB from "figma:asset/b700a4bda2ef0ceacaf56b1c8edc736bfaa95522.png";
 
-const PARTY_IMAGES      = [imgSafdgdbnf, imgNrhdfbg, imgHrsbgfdxVc, img855, img833, imgC9556];
+const PARTY_IMAGES      = [imgSafdgdbnf, imgHrsbgfdxVc, img855, img833, imgC9556];
 const DRINK_IMAGES_B    = [imgDrinkD, imgDrinkF, imgDrinkI, imgDrinkJ, imgDrinkK, imgDrinkL];
 // The six Figma-matched spice/bitter images (screen 14/17)
 const DRINK_IMAGES_SPICE = [imgDrinkH, imgDrinkE, imgDrinkB, imgDrinkF, imgDrinkC, imgDrinkG];
@@ -61,15 +61,15 @@ interface CocktailItem {
   cx: number; cy: number;  // explicit wide-spread void positions
 }
 const COCKTAIL_BUILD_ITEMS: CocktailItem[] = [
-  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 133, h: 121, radius:  9.131, rotZ: -3.5, cx:  100, cy: -130 },
-  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  57, h:  69,            rotZ:  5.2, cx:  160, cy:  -55 },
-  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 113, h: 113, radius: 56.5,  rotZ: -6.0, cx:   85, cy:   40 },
-  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 106, h: 131, radius:  9.131, rotZ:  4.0, cx: -110, cy:  -90 },
-  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w:  70, h:  65, radius: 40.604, rotZ: -8.0, cx: -165, cy:    0 },
-  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 160, h:  99, radius:  9.131, rotZ:  3.5, cx:   75, cy:  160 },
-  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 149, h:  83,                  rotZ: -4.0, cx:  -45, cy:  140 },
-  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 110, h: 170, radius:  9.131, rotZ:  6.0, cx: -120, cy:  175 },
-  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  70, h:  43,                  rotZ: -5.5, cx: -162, cy:  120 },
+  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 190, h: 170, radius:  9.131, rotZ: -3.5, cx:   90, cy: -140 },
+  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  65, h:  78,            rotZ:  5.2, cx:  155, cy:  -60 },
+  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 165, h: 165, radius: 82,    rotZ: -6.0, cx:   80, cy:   30 },
+  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 155, h: 190, radius:  9.131, rotZ:  4.0, cx: -105, cy: -100 },
+  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w: 110, h: 100, radius: 55,    rotZ: -8.0, cx: -145, cy:   10 },
+  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 220, h: 140, radius:  9.131, rotZ:  3.5, cx:   65, cy:  150 },
+  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 165, h:  90,                  rotZ: -4.0, cx:  -50, cy:  130 },
+  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 155, h: 240, radius:  9.131, rotZ:  6.0, cx: -105, cy:  155 },
+  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  80, h:  50,                  rotZ: -5.5, cx: -150, cy:  110 },
 ];
 
 // ── Keyword-triggered ingredient images (step 13) ─────────────────────────────
@@ -106,9 +106,7 @@ interface Step {
 const STEPS: Step[] = [
   // 0 — guest question
   { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 1 — visuals spawn; auto-advance to date question
-  { aiText: "The game works best with 6+ guests...", aiY: 85, userText: "", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 2 — date/time question
+  // 1 — date/time question
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 3 — confirmation with tiles
   { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
@@ -120,21 +118,19 @@ const STEPS: Step[] = [
   { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
   // 7 — bridge
   { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 8 — tone intro, auto-advance
-  { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1800 },
+  // 8 — tone intro, waits for voice to finish before advancing to bottle prompt
+  { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 9 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
   { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10 — bottle selector: user taps a bottle to advance
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select", noVoice: true },
+  // 10 — bottle selector: AI speaks while user chooses; tapping a bottle advances
+  { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 11 — dynamic bottle selection response (text set via getAiText); then ask flavour
-  { aiText: "", aiY: 85, userText: "something fruity, maybe strong?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "", aiY: 85, userText: "something fruity, maybe orange?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 12 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
   { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 13 — "talking" pops chocolate shavings + dark-spice; accumulates from step 12
-  { aiText: "Now we're talking!", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 14 — still building the cocktail; video only fires on step 15
+  // 13 — still building; "depth"/"spice" keywords trigger more ingredient tiles
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 15 — orange video reveal: dynamic text names the chosen bottle; no voice
+  // 14 — orange video reveal: dynamic text names the chosen bottle; no voice
   { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
   // 16 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
@@ -145,8 +141,8 @@ const STEPS: Step[] = [
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 11;
-const COCKTAIL_REVEAL_STEP = 15;
+const BOTTLE_RESPONSE_STEP = 10;
+const COCKTAIL_REVEAL_STEP = 13;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
@@ -238,6 +234,20 @@ function Waveform() {
 // ─── Cursor blink ─────────────────────────────────────────────────────���───────
 function Cursor() {
   return <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />;
+}
+
+// Highlight "orange" in orange within user text
+function UserText({ text }: { text: string }) {
+  const parts = text.split(/(orange)/gi);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^orange$/i.test(part)
+          ? <span key={i} style={{ color: "#F97316" }}>{part}</span>
+          : part
+      )}
+    </>
+  );
 }
 
 // ─── Blur-reveal text ─────────────────────────────────────────────────────────
@@ -347,6 +357,9 @@ export function PartyPlannerScreen() {
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
+  // Info-gather tap UI — shown after intro, before main chat
+  const [infoGatherActive, setInfoGatherActive] = useState(false);
+  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
@@ -481,14 +494,14 @@ export function PartyPlannerScreen() {
 
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
-    if (introActive) return;
+    if (introActive || infoGatherActive) return;
     clearAll();
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 12-14 window
-    if (step < 12 || step > 14) setBuildKeywords(new Set()); // step 14 is last build step
+    // Reset cocktail-build accumulator when leaving the 12-13 window
+    if (step < 12 || step > 13) setBuildKeywords(new Set()); // step 13 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
@@ -497,7 +510,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
-    if (introActive) return;
+    if (introActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
     const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
@@ -630,7 +643,10 @@ export function PartyPlannerScreen() {
   };
 
   const handleContinue = () => {
-    if (current.view === "email" && lastEmail) setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    if (current.view === "email" && lastEmail) {
+      // Wait for any ongoing voice line to finish before advancing so it isn't cut off
+      getSpeechPromise().then(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)));
+    }
   };
 
   // Direct step jump for the "Continue with Apple Pay" button (bypasses mic cycle)
@@ -709,6 +725,8 @@ export function PartyPlannerScreen() {
             transition={{ duration: 0.9, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
           >
+            {/* Solid fallback so it's never pure black while image/video loads */}
+            <div style={{ position: "absolute", inset: 0, backgroundColor: "#3a1500" }} />
             {/* Orange image as fallback below video */}
             <img src={imgVideoFrame} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
             {/* Actual video — plays once at full length with volume; no loop so it isn't cut off */}
@@ -937,7 +955,7 @@ export function PartyPlannerScreen() {
                     <div style={{ flexShrink: 0, width: 6, height: 6, borderRadius: "50%", backgroundColor: "#e5311c", animation: "voicePulse 0.65s ease-in-out infinite" }} />
                   )}
                   <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", lineHeight: 1.5, margin: 0, textAlign: "center", flex: 1 }}>
-                    {userDisplay}{isUserTyping && <Cursor />}
+                    <UserText text={userDisplay} />{isUserTyping && <Cursor />}
                   </p>
                 </>
               )}
@@ -982,16 +1000,16 @@ export function PartyPlannerScreen() {
 
       {/* ── Ambient glow while AI types (hidden on cocktail-video) ──────────────── */}
       <AnimatePresence>
-        {phase === "ai_typing" && current.imgState !== "cocktail-video" && (
+        {phase === "ai_typing" && current.imgState !== "cocktail-video" && !isBottleSelect && (
           <motion.div key="glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
             style={{ position: "absolute", left: "50%", top: current.aiY, transform: "translate(-50%,-50%)", width: 320, height: 120, borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,255,255,0.045) 0%, transparent 70%)", pointerEvents: "none" }}
           />
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on cocktail-video so the video has no overlaid copy) ── */}
+      {/* ── AI text (hidden on cocktail-video and bottle-select; voice plays but no overlay) ── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && (
+        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && !isBottleSelect && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={isEmailStep
@@ -1024,7 +1042,7 @@ export function PartyPlannerScreen() {
                   )}
                 </AnimatePresence>
                 <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", textAlign: "center", lineHeight: 1.5, margin: 0, flex: 1 }}>
-                  {userDisplay}{isUserTyping && <Cursor />}
+                  <UserText text={userDisplay} />{isUserTyping && <Cursor />}
                 </p>
               </div>
             )}
@@ -1122,7 +1140,26 @@ export function PartyPlannerScreen() {
             transition={{ duration: 1.1, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, backgroundColor: "#000", zIndex: 200, borderRadius: 21 }}
           >
-            <IntroScreen onComplete={() => setIntroActive(false)} />
+            <IntroScreen onComplete={() => { setIntroActive(false); setInfoGatherActive(true); }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Info-gather tap UI — shown after intro, before main chat ───────────── */}
+      <AnimatePresence>
+        {infoGatherActive && !introActive && (
+          <motion.div
+            key="info-gather-overlay"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 150, borderRadius: 21 }}
+          >
+            <InfoGatherScreen onComplete={(details) => {
+              setPartyDetails(details);
+              setInfoGatherActive(false);
+              setStep(3); // skip typed Q&A steps 0-2, jump to invite preview
+            }} />
           </motion.div>
         )}
       </AnimatePresence>

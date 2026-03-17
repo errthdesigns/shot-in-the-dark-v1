@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
 import { getAnalyser } from "../services/elevenlabs";
 
-// ── Full-screen smoky ember ───────────────────────────────────────────────────
-// Heat source at the bottom. Smoke columns rise and fill the whole screen.
-// Each column uses a vertically-stretched ellipse with rH ≥ H so colour
-// reaches from floor to ceiling. Slow compound sway creates organic flow.
+// ── Full-screen deep crimson atmosphere ───────────────────────────────────────
+// Three large overlapping light sources sweep the whole screen on slow
+// Lissajous paths. Radius > 1× W so each source bleeds completely off all
+// four edges — result is a rich red wash with no visible orb shape, just
+// shifting atmosphere. Audio energy brightens and saturates the red.
 
 function getAudioLevels(analyser: AnalyserNode) {
   const data = new Uint8Array(analyser.frequencyBinCount);
@@ -15,43 +16,30 @@ function getAudioLevels(analyser: AnalyserNode) {
   return { bass: avg(0, 6), mid: avg(6, 24), high: avg(24, 48) };
 }
 
-// Draw a vertically-stretched radial gradient (circle → tall ellipse via scale).
-// Centre is at (cx, cy). rW = horizontal radius. rH = vertical radius.
-// Clipping arc is scaled to rW (becomes rH tall after ctx.scale).
-function drawEllipseGlow(
+function drawRadialGlow(
   ctx: CanvasRenderingContext2D,
   cx: number, cy: number,
-  rW: number, rH: number,
+  r: number,
   stops: [number, string][],
 ) {
-  if (rW <= 0 || rH <= 0) return;
-  const yScale = rH / rW;
+  if (r <= 0) return;
   ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(1, yScale);
-  const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, rW);
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
   stops.forEach(([p, c]) => grd.addColorStop(p, c));
   ctx.beginPath();
-  ctx.arc(0, 0, rW, 0, Math.PI * 2);
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fillStyle = grd;
   ctx.fill();
   ctx.restore();
 }
 
-// Compound sway: two overlapping sine waves for organic, non-repeating drift
-function sway(t: number, speed: number, phase: number, amp: number) {
-  return (
-    Math.sin(t * speed         + phase)       * amp * 0.70 +
-    Math.sin(t * speed * 2.37  + phase * 1.6) * amp * 0.30
-  );
-}
-
-// Four columns. xBase: resting x as fraction of W.
-const COLUMNS = [
-  { x: 0.50, phase: 0.00, spd: 0.00016, swingW: 0.13, rWf: 0.60, alphaMul: 1.00 },
-  { x: 0.28, phase: 2.09, spd: 0.00012, swingW: 0.11, rWf: 0.50, alphaMul: 0.85 },
-  { x: 0.74, phase: 4.19, spd: 0.00019, swingW: 0.10, rWf: 0.46, alphaMul: 0.82 },
-  { x: 0.50, phase: 1.05, spd: 0.00009, swingW: 0.16, rWf: 0.38, alphaMul: 0.70 },
+// Three large orbiters — rf > 1.0 so the glow source fills past every edge.
+// ampX/ampY > 0.5 pushes the centre off-screen so the hot core is never
+// visible as a round blob in the middle of the display.
+const ORBITERS = [
+  { phase: 0.00,  sX: 0.00013, sY: 0.00010, ampX: 0.55, ampY: 0.52, rf: 1.10, mul: 1.00, hue: 2 },
+  { phase: 2.094, sX: 0.00009, sY: 0.00017, ampX: 0.50, ampY: 0.48, rf: 0.95, mul: 0.88, hue: 358 },
+  { phase: 4.189, sX: 0.00019, sY: 0.00013, ampX: 0.46, ampY: 0.54, rf: 0.82, mul: 0.76, hue: 5 },
 ];
 
 let _energy = 0;
@@ -71,81 +59,71 @@ export function AudioReactiveGradient() {
       const W = canvas.width;
       const H = canvas.height;
 
+      // Near-black with a hair of red so even silent moments aren't dead black
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = "#0b0000";
       ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = "lighter";
 
       const analyser = getAnalyser();
       const lvl = analyser ? getAudioLevels(analyser) : { bass: 0, mid: 0, high: 0 };
 
-      const rawE = lvl.bass * 0.60 + lvl.mid * 0.40;
-      _energy += (rawE - _energy) * (rawE > _energy ? 0.16 : 0.035);
-      _eHigh  += (lvl.high - _eHigh) * (lvl.high > _eHigh ? 0.20 : 0.05);
-      const e  = _energy;
+      _energy += ((lvl.bass * 0.55 + lvl.mid * 0.45) - _energy) * (_energy < lvl.bass ? 0.06 : 0.020);
+      _eHigh  += (lvl.high - _eHigh) * (lvl.high > _eHigh ? 0.08 : 0.030);
+      const e = _energy;
 
-      // Ember anchor — bottom centre, slight ambient drift
-      const emberX = W * (0.50 + Math.sin(t * 0.00022) * 0.018);
-      const emberY = H * 0.99;
-
-      // ── 1. Wide background haze — fills the whole screen faintly ─────────
-      // rH is set to H so it physically covers floor-to-ceiling
-      const hazeAlpha = 0.12 + e * 0.14;
-      const hazeH     = 24 + lvl.bass * 4;
-      drawEllipseGlow(ctx, W * 0.5, emberY, W * 0.70, H * 1.05, [
-        [0,    `hsla(${hazeH},82%,16%,${hazeAlpha.toFixed(3)})`],
-        [0.3,  `hsla(${hazeH},78%,10%,${(hazeAlpha * 0.7).toFixed(3)})`],
-        [0.65, `hsla(${hazeH},74%,5%,${(hazeAlpha * 0.30).toFixed(3)})`],
-        [0.88, `hsla(${hazeH},70%,3%,${(hazeAlpha * 0.07).toFixed(3)})`],
-        [1,    `hsla(${hazeH},68%,2%,0)`],
+      // ── 1. Large screen-filling ambient haze ─────────────────────────────
+      // Always present — ensures the whole display reads red even in silence.
+      const hazeA = 0.18 + e * 0.12;
+      const hazeX = W * (0.5 + Math.sin(t * 0.000055) * 0.14);
+      const hazeY = H * (0.42 + Math.cos(t * 0.000042) * 0.18);
+      drawRadialGlow(ctx, hazeX, hazeY, W * 1.05, [
+        [0,    `hsla(3,84%,18%,${hazeA.toFixed(3)})`],
+        [0.38, `hsla(3,80%,9%,${(hazeA * 0.52).toFixed(3)})`],
+        [0.70, `hsla(3,74%,4%,${(hazeA * 0.18).toFixed(3)})`],
+        [1,    `hsla(3,68%,1%,0)`],
       ]);
 
-      // ── 2. Smoke columns — tall ellipses that fill the screen ────────────
-      COLUMNS.forEach((col) => {
-        const cx = (col.x + sway(t, col.spd, col.phase, col.swingW)) * W;
+      // ── 2. Counter-haze from bottom-right corner — adds depth variation ──
+      const hazeB = 0.12 + e * 0.08;
+      drawRadialGlow(ctx, W * 0.88, H * 0.88, W * 0.92, [
+        [0,    `hsla(0,90%,14%,${hazeB.toFixed(3)})`],
+        [0.50, `hsla(0,84%,6%,${(hazeB * 0.40).toFixed(3)})`],
+        [1,    `hsla(0,78%,1%,0)`],
+      ]);
 
-        // rH slightly larger than H so gradient top sits above screen edge
-        const rW = col.rWf * W;
-        const rH = H * (1.08 + e * 0.35);   // taller with audio → top edge shifts upward
+      // ── 3. Three large orbiting sources ──────────────────────────────────
+      ORBITERS.forEach((orb) => {
+        const ox = W * (0.5 + Math.sin(t * orb.sX + orb.phase) * orb.ampX);
+        const oy = H * (0.5 + Math.cos(t * orb.sY + orb.phase + 0.7) * orb.ampY);
 
-        // Alpha and lightness: visible when silent, warm+bright when speaking
-        const alpha = col.alphaMul * (0.20 + e * 0.38);
-        const lBase = 13  + e * 30;
-        const hue   = 23  + Math.sin(t * 0.00008 + col.phase) * 5 + lvl.bass * 5;
+        const r     = W * (orb.rf + e * 0.18);
+        const alpha = orb.mul * (0.22 + e * 0.30);
+        const lBase = 12 + e * 24;
+        const hue   = orb.hue + lvl.bass * 4;
 
-        drawEllipseGlow(ctx, cx, emberY, rW, rH, [
+        drawRadialGlow(ctx, ox, oy, r, [
           [0,    `hsla(${hue},92%,${lBase}%,${alpha.toFixed(3)})`],
-          [0.18, `hsla(${hue},88%,${lBase * 0.80}%,${(alpha * 0.88).toFixed(3)})`],
-          [0.42, `hsla(${hue},84%,${lBase * 0.55}%,${(alpha * 0.58).toFixed(3)})`],  // ← mid-screen
-          [0.68, `hsla(${hue},78%,${lBase * 0.28}%,${(alpha * 0.24).toFixed(3)})`],  // ← upper screen
-          [0.85, `hsla(${hue},72%,${lBase * 0.10}%,${(alpha * 0.07).toFixed(3)})`],
-          [1,    `hsla(${hue},68%,2%,0)`],
+          [0.22, `hsla(${hue},88%,${(lBase * 0.68).toFixed(1)}%,${(alpha * 0.78).toFixed(3)})`],
+          [0.48, `hsla(${hue},82%,${(lBase * 0.34).toFixed(1)}%,${(alpha * 0.42).toFixed(3)})`],
+          [0.72, `hsla(${hue},76%,${(lBase * 0.12).toFixed(1)}%,${(alpha * 0.14).toFixed(3)})`],
+          [0.88, `hsla(${hue},70%,${(lBase * 0.04).toFixed(1)}%,${(alpha * 0.04).toFixed(3)})`],
+          [1,    `hsla(${hue},64%,1%,0)`],
         ]);
       });
 
-      // ── 3. Core ember — concentrated hot glow at the source ──────────────
-      const coreRW = W * (0.36 + e * 0.20);
-      const coreRH = coreRW * (1.6 + e * 0.9);   // slightly elliptical rising tongue
-      const coreL  = 8 + e * 56;
-      const coreH  = 27 + lvl.bass * 6;
+      // ── 4. Audio-reactive pulse — red, not orange ─────────────────────────
+      if (e > 0.03 || _eHigh > 0.02) {
+        const orb = ORBITERS[0];
+        const hx = W * (0.5 + Math.sin(t * orb.sX + orb.phase) * orb.ampX);
+        const hy = H * (0.5 + Math.cos(t * orb.sY + orb.phase + 0.7) * orb.ampY);
+        const hr = W * (0.32 + e * 0.20 + _eHigh * 0.10);
+        const hl = 10 + e * 40 + _eHigh * 18;
 
-      drawEllipseGlow(ctx, emberX, emberY, coreRW, coreRH, [
-        [0,    `hsla(${coreH},98%,${coreL}%,0.95)`],
-        [0.20, `hsla(${coreH},96%,${coreL * 0.55}%,0.60)`],
-        [0.45, `hsla(${coreH},90%,${coreL * 0.22}%,0.22)`],
-        [0.72, `hsla(${coreH},84%,${coreL * 0.08}%,0.06)`],
-        [1,    `hsla(${coreH},78%,3%,0)`],
-      ]);
-
-      // ── 4. High-freq spark flicker ────────────────────────────────────────
-      if (_eHigh > 0.05) {
-        const sparks = e * _eHigh;
-        const sx = emberX + Math.sin(t * 0.0048 + lvl.mid * 5) * 0.09 * W;
-        const sy = emberY - (0.08 + Math.abs(Math.cos(t * 0.006)) * 0.15 + e * 0.22) * H;
-        const sl = Math.min(50 + sparks * 40, 86);
-        drawEllipseGlow(ctx, sx, sy, W * 0.09 * sparks, W * 0.09 * sparks * 2.5, [
-          [0, `hsla(32,100%,${sl}%,${(sparks * 0.88).toFixed(3)})`],
-          [1, `hsla(28,100%,26%,0)`],
+        drawRadialGlow(ctx, hx, hy, hr, [
+          [0,    `hsla(4,100%,${hl.toFixed(1)}%,${(0.78 + e * 0.22).toFixed(3)})`],
+          [0.38, `hsla(2,96%,${(hl * 0.38).toFixed(1)}%,${(0.38 + e * 0.18).toFixed(3)})`],
+          [1,    `hsla(0,88%,3%,0)`],
         ]);
       }
 

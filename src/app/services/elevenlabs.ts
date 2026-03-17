@@ -40,10 +40,6 @@ function revokeCurrent() {
 }
 export function unlockAudio(): void {
   const el = getEl(); el.src = SILENT_WAV; el.volume = 0; el.play().catch(() => {});
-  // Also resume / create the AudioContext right on user interaction so it's
-  // never in "suspended" state when speakText is called later.
-  ensureAnalyser();
-  _audioCtx?.resume().catch(() => {});
 }
 export function stopSpeech(): void {
   _gen++;
@@ -92,7 +88,7 @@ export async function speakText(text: string): Promise<void> {
       const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
         method: "POST", signal: controller.signal,
         headers: { "xi-api-key": API_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text: toSSML(text), model_id: "eleven_multilingual_v2", voice_settings: { stability: 1.0, similarity_boost: 0.85, style: 0.0, use_speaker_boost: true } }),
+        body: JSON.stringify({ text: toSSML(text), model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.75, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false } }),
       });
       if (_gen !== myGen) { resolve(); return; }
       if (!res.ok) { console.error("[EL] HTTP", res.status); resolve(); _resolve = null; return; }

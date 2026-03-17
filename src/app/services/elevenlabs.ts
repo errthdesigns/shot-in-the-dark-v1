@@ -20,7 +20,9 @@ function ensureAnalyser(): void {
   if (_analyser) return;
   try {
     const el = getEl();
-    _audioCtx = new AudioContext();
+    // Reuse the AudioContext created in unlockAudio() (inside user gesture).
+    // Never create a new one here — a context created outside a gesture is blocked by browsers.
+    if (!_audioCtx) _audioCtx = new AudioContext();
     _analyser = _audioCtx.createAnalyser();
     _analyser.fftSize = 128;
     _analyser.smoothingTimeConstant = 0.82;

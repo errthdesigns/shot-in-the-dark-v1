@@ -36,8 +36,6 @@ import imgDrinkK from "figma:asset/5b873ac3b3d33a7fc5b92bb7718e0bacd44d94b3.png"
 import imgDrinkL from "figma:asset/5d7e916fcf23b5e34746902373fb092a3decd6e7.png";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
-import imgVideoFrame from "figma:asset/a801057e54da16ed98c5ecb3d99195543f0ac4fe.png";
-import videoCocktailReveal from "../../assets/Untitled (71).mp4";
 
 // ── Gatsby theme images ───────────────────────────────────────────────────────
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
@@ -91,7 +89,7 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
-type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build" | "cocktail-video";
+type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build";
 type ViewState = "chat" | "bottle-select" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
@@ -126,9 +124,7 @@ const STEPS: Step[] = [
   { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 9 — still building; "depth"/"spice" keywords trigger more ingredient tiles
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10 — orange video reveal: dynamic text names the chosen bottle; no voice
-  { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
-  // 11 — recipe card with sequential ingredient spawn
+  // 10 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
   // 12 — invite preview: waits for mic tap before revealing invite
   { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
@@ -144,7 +140,6 @@ const STEPS: Step[] = [
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
 const BOTTLE_RESPONSE_STEP = 7;
-const COCKTAIL_REVEAL_STEP = 10;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
@@ -152,16 +147,9 @@ const BOTTLE_RESPONSES: Record<string, string> = {
   blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.\n\nNow — what are you working with flavour-wise?",
 };
 
-const BOTTLE_REVEAL_TEXTS: Record<string, string> = {
-  cristalino: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Don Julio 70 Cristalino base.",
-  reposado:   "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.",
-  blanco:     "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Blanco base.",
-};
-
 function resolveAiText(stepIdx: number, bottle: string | null): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
-  if (stepIdx === COCKTAIL_REVEAL_STEP && bottle)  return BOTTLE_REVEAL_TEXTS[bottle] ?? STEPS[stepIdx].aiText;
-  return STEPS[stepIdx].aiText;
+return STEPS[stepIdx].aiText;
 }
 
 const WAVE_H = [7, 14, 20, 11, 22, 9, 17, 13, 21, 8, 16, 12];
@@ -674,7 +662,7 @@ export function PartyPlannerScreen() {
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
-        {!showGallery && current.imgState !== "cocktail-video" && current.view === "chat" && (
+        {!showGallery && current.view === "chat" && (
           <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
             style={{ position: "absolute", inset: 0 }}
           >
@@ -721,31 +709,6 @@ export function PartyPlannerScreen() {
               style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.82) 100%)" }}
             />
           </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Cocktail-video: orange full-bleed background for the "Finally" reveal ── */}
-      <AnimatePresence>
-        {current.imgState === "cocktail-video" && (
-          <motion.div key="cocktail-video"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.9, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-          >
-            {/* Solid fallback so it's never pure black while image/video loads */}
-            <div style={{ position: "absolute", inset: 0, backgroundColor: "#3a1500" }} />
-            {/* Orange image as fallback below video */}
-            <img src={imgVideoFrame} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-            {/* Actual video — plays once at full length with volume; no loop so it isn't cut off */}
-            <video
-              autoPlay playsInline controlsList="nodownload"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", maxWidth: "none" }}
-              src={videoCocktailReveal}
-              onEnded={() => setPhase("ready")}
-            />
-            {/* Gradient so text is legible over the bright orange */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.88) 100%)" }} />
-          </motion.div>
         )}
       </AnimatePresence>
 
@@ -1002,21 +965,21 @@ export function PartyPlannerScreen() {
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isThinking && !isBottleSelect && current.imgState !== "cocktail-video" && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
+        {isThinking && !isBottleSelect && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
       </AnimatePresence>
 
-      {/* ── Ambient glow while AI types (hidden on cocktail-video) ──────────────── */}
+      {/* ── Ambient glow while AI types ──────────────────────────────────────── */}
       <AnimatePresence>
-        {phase === "ai_typing" && current.imgState !== "cocktail-video" && !isBottleSelect && (
+        {phase === "ai_typing" && !isBottleSelect && (
           <motion.div key="glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
             style={{ position: "absolute", left: "50%", top: current.aiY, transform: "translate(-50%,-50%)", width: 320, height: 120, borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,255,255,0.045) 0%, transparent 70%)", pointerEvents: "none" }}
           />
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on cocktail-video and bottle-select; voice plays but no overlay) ── */}
+      {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && !isBottleSelect && (
+        {!isThinking && aiDisplay && !isBottleSelect && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={isEmailStep

@@ -178,7 +178,7 @@ function PegmanFigure({ dead = false }: { dead?: boolean }) {
   );
 }
 
-// ── Texas dark map ─────────────────────────────────────────────────────────────
+// ── Texas dark map (organic street-map style) ─────────────────────────────────
 function TexasMap({
   playerName,
   onDrop,
@@ -193,7 +193,7 @@ function TexasMap({
   const mapRef = useRef<HTMLDivElement>(null);
 
   const handleMapTap = (e: React.MouseEvent | React.TouchEvent) => {
-    if (dropPos) return; // already dropped
+    if (dropPos) return;
     const el = mapRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -205,8 +205,8 @@ function TexasMap({
       cx = (e as React.MouseEvent).clientX;
       cy = (e as React.MouseEvent).clientY;
     }
-    const xPct = Math.max(10, Math.min(90, ((cx - rect.left) / rect.width) * 100));
-    const yPct = Math.max(10, Math.min(80, ((cy - rect.top)  / rect.height) * 100));
+    const xPct = Math.max(8, Math.min(92, ((cx - rect.left) / rect.width) * 100));
+    const yPct = Math.max(8, Math.min(85, ((cy - rect.top)  / rect.height) * 100));
     onDrop(xPct, yPct);
   };
 
@@ -217,41 +217,63 @@ function TexasMap({
       style={{
         position: "relative",
         width: "100%",
-        height: 210,
-        borderRadius: 14,
+        height: 270,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: dropPos ? "default" : "crosshair",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
       }}
     >
-      {/* SVG map base */}
-      <svg width="100%" height="210" viewBox="0 0 320 210" style={{ display: "block" }}>
-        <rect width="320" height="210" fill="#1a1a1a" />
-        {/* Parks */}
-        <rect x="22" y="18"  width="55" height="38" rx="4" fill="#1e2b1e" />
-        <rect x="195" y="95" width="48" height="32" rx="4" fill="#1e2b1e" />
-        <rect x="135" y="158" width="75" height="28" rx="4" fill="#1e2b1e" />
-        {/* River */}
-        <path d="M0 178 Q45 168 88 180 Q128 192 162 174 Q202 156 244 170 Q282 182 320 168"
-          fill="none" stroke="#1a3040" strokeWidth="15" strokeLinecap="round" />
-        {/* Street grid horizontal */}
-        {[38, 62, 86, 110, 134].map((y, i) => (
-          <line key={`h${i}`} x1="0" y1={y} x2="320" y2={y}
-            stroke={i % 2 === 0 ? "#2c2c2c" : "#252525"} strokeWidth={i % 2 === 0 ? 2 : 1} />
-        ))}
-        {/* Street grid vertical */}
-        {[48, 90, 132, 174, 216, 264].map((x, i) => (
-          <line key={`v${i}`} x1={x} y1="0" x2={x} y2="210"
-            stroke={i % 3 === 0 ? "#2c2c2c" : "#252525"} strokeWidth={i % 3 === 0 ? 2 : 1} />
-        ))}
-        {/* Major roads */}
-        <line x1="0" y1="86" x2="320" y2="86" stroke="#383838" strokeWidth="3.5" />
-        <line x1="132" y1="0" x2="132" y2="210" stroke="#383838" strokeWidth="3.5" />
-        {/* City label */}
-        <text x="160" y="15" textAnchor="middle"
-          fontFamily="Inter, sans-serif" fontSize="8" fontWeight="700"
-          letterSpacing="2.5" fill="rgba(255,255,255,0.25)">
-          TEXAS
-        </text>
+      {/* SVG dark street map — organic city layout */}
+      <svg width="100%" height="270" viewBox="0 0 320 270" preserveAspectRatio="xMidYMid slice" style={{ display: "block" }}>
+        {/* Base */}
+        <rect width="320" height="270" fill="#111111" />
+
+        {/* City blocks / building footprints */}
+        <rect x="10"  y="12"  width="62" height="44" rx="2" fill="#1a1a1a" />
+        <rect x="82"  y="8"   width="44" height="36" rx="2" fill="#1a1a1a" />
+        <rect x="140" y="14"  width="56" height="28" rx="2" fill="#1a1a1a" />
+        <rect x="214" y="10"  width="72" height="52" rx="2" fill="#1a1a1a" />
+        <rect x="10"  y="76"  width="40" height="52" rx="2" fill="#1a1a1a" />
+        <rect x="64"  y="80"  width="60" height="40" rx="2" fill="#1a1a1a" />
+        <rect x="140" y="72"  width="36" height="60" rx="2" fill="#1a1a1a" />
+        <rect x="196" y="78"  width="50" height="44" rx="2" fill="#1a1a1a" />
+        <rect x="258" y="68"  width="52" height="58" rx="2" fill="#1a1a1a" />
+        <rect x="10"  y="152" width="56" height="48" rx="2" fill="#1a1a1a" />
+        <rect x="82"  y="148" width="42" height="56" rx="2" fill="#1a1a1a" />
+        <rect x="140" y="154" width="64" height="44" rx="2" fill="#1a1a1a" />
+        <rect x="222" y="150" width="46" height="50" rx="2" fill="#1a1a1a" />
+        <rect x="282" y="154" width="32" height="42" rx="2" fill="#1a1a1a" />
+        <rect x="10"  y="218" width="88" height="40" rx="2" fill="#1a1a1a" />
+        <rect x="116" y="216" width="72" height="44" rx="2" fill="#1a1a1a" />
+        <rect x="204" y="220" width="80" height="38" rx="2" fill="#1a1a1a" />
+
+        {/* Park / green space */}
+        <rect x="134" y="76" width="48" height="58" rx="5" fill="#162216" />
+        <rect x="16"  y="150" width="50" height="6"  rx="2" fill="#1d2a1d" />
+
+        {/* Secondary streets — thin, winding */}
+        <path d="M0 66 C40 62 80 70 130 65 S220 58 320 64" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        <path d="M0 138 C50 134 90 142 160 136 S260 130 320 138" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        <path d="M0 210 C60 206 110 214 180 208 S270 202 320 210" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        <path d="M56 0 C52 40 60 80 54 140 S48 200 56 270" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        <path d="M136 0 C132 50 140 100 134 160 S128 220 136 270" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        <path d="M218 0 C214 45 222 90 216 150 S210 210 218 270" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+        {/* Diagonal cut-throughs */}
+        <path d="M0 90 C30 75 70 60 100 48" fill="none" stroke="#242424" strokeWidth="3.5" />
+        <path d="M220 270 C240 240 260 200 290 160" fill="none" stroke="#242424" strokeWidth="3.5" />
+        <path d="M0 180 C25 165 55 155 80 148" fill="none" stroke="#242424" strokeWidth="3.5" />
+
+        {/* Major boulevard — horizontal */}
+        <path d="M0 66 C40 62 80 70 130 65 S220 58 320 64" fill="none" stroke="#3a3a3a" strokeWidth="8" />
+        <path d="M0 210 C60 206 110 214 180 208 S270 202 320 210" fill="none" stroke="#3a3a3a" strokeWidth="8" />
+        {/* Major boulevard — vertical */}
+        <path d="M136 0 C132 50 140 100 134 160 S128 220 136 270" fill="none" stroke="#3a3a3a" strokeWidth="8" />
+
+        {/* Center lines on major roads */}
+        <path d="M0 66 C40 62 80 70 130 65 S220 58 320 64" fill="none" stroke="#454545" strokeWidth="1.5" strokeDasharray="8 8" />
+        <path d="M0 210 C60 206 110 214 180 208 S270 202 320 210" fill="none" stroke="#454545" strokeWidth="1.5" strokeDasharray="8 8" />
+        <path d="M136 0 C132 50 140 100 134 160 S128 220 136 270" fill="none" stroke="#454545" strokeWidth="1.5" strokeDasharray="8 8" />
       </svg>
 
       {/* Tap-to-place instruction (shown when not yet dropped) */}
@@ -284,46 +306,48 @@ function TexasMap({
           pointerEvents: "none",
         }}>
           <PegmanFigure dead={isDead} />
-          {/* House label */}
-          <AnimatePresence>
-            {isDead && (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.3 }}
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  marginTop: 6,
-                  background: "rgba(0,0,0,0.75)",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: 6,
-                  padding: "4px 9px",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <p style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "white",
-                  margin: 0,
-                  letterSpacing: 0.5,
-                }}>
-                  {playerName ? `${playerName}'s House` : "My House"}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       )}
 
-      {/* Vignette */}
+      {/* "Joe's House" banner at bottom — matches Figma */}
+      <AnimatePresence>
+        {isDead && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.35 }}
+            style={{
+              position: "absolute",
+              bottom: 0, left: 0, right: 0,
+              background: "rgba(10,10,10,0.88)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              borderTop: "1px solid rgba(255,255,255,0.1)",
+              padding: "14px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 8,
+            }}
+          >
+            <p style={{
+              fontFamily: "Spectral, serif",
+              fontSize: 18,
+              fontWeight: 500,
+              color: "white",
+              margin: 0,
+              letterSpacing: -0.2,
+            }}>
+              {playerName ? `${playerName}'s House` : "My House"}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edge vignette */}
       <div style={{
-        position: "absolute", inset: 0, borderRadius: 14, pointerEvents: "none",
-        background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.5) 100%)",
+        position: "absolute", inset: 0, borderRadius: 16, pointerEvents: "none",
+        background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 20%, transparent 65%, rgba(0,0,0,0.2) 100%)",
       }} />
     </div>
   );
@@ -626,38 +650,13 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
 
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-                {/* Time tiles — shown FIRST per the screenshot */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: GAP }}>
-                  {TIME_OPTIONS.map((t, i) => {
-                    const sel = time === t;
-                    return (
-                      <motion.button
-                        key={t}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.28, delay: i * 0.05 }}
-                        onClick={() => setTime(t)}
-                        whileTap={{ scale: 0.94 }}
-                        style={tileStyle(sel, TILE_H_SM)}
-                      >
-                        <span style={{
-                          fontFamily: "Spectral, serif",
-                          fontWeight: sel ? 700 : 500,
-                          fontSize: 18,
-                          color: sel ? "black" : "white",
-                        }}>{t}</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-
-                {/* Date strip */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* Date strip — large horizontal-scroll cards */}
                 <div
                   ref={scrollRef}
                   style={{
                     display: "flex", gap: 10, overflowX: "auto",
-                    paddingBottom: 4, scrollbarWidth: "none",
+                    paddingBottom: 6, scrollbarWidth: "none",
                     WebkitOverflowScrolling: "touch",
                   } as React.CSSProperties}
                 >
@@ -666,21 +665,68 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
                     return (
                       <motion.button
                         key={i}
-                        initial={{ opacity: 0, x: 12 }}
+                        initial={{ opacity: 0, x: 14 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.25, delay: Math.min(i * 0.02, 0.3) }}
+                        transition={{ duration: 0.25, delay: Math.min(i * 0.022, 0.32) }}
                         onClick={() => setDateIdx(i)}
                         whileTap={{ scale: 0.92 }}
                         style={{
-                          flexShrink: 0, width: 64, height: 80, borderRadius: 10,
+                          flexShrink: 0, width: 88, height: 108, borderRadius: 12,
                           border: "1px solid white", background: sel ? "white" : "black",
                           cursor: "pointer", display: "flex", flexDirection: "column",
-                          alignItems: "center", justifyContent: "center", gap: 2,
+                          alignItems: "center", justifyContent: "center", gap: 4,
+                          padding: "10px 0",
                         }}
                       >
-                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", color: sel ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.45)" }}>{d.day}</span>
-                        <span style={{ fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 26, color: sel ? "black" : "white", lineHeight: 1 }}>{d.num}</span>
-                        <span style={{ fontFamily: "Inter, sans-serif", fontSize: 9, color: sel ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.45)" }}>{d.month}</span>
+                        <span style={{
+                          fontFamily: "Inter, sans-serif", fontSize: 10, letterSpacing: 1.8,
+                          textTransform: "uppercase", fontWeight: 600,
+                          color: sel ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)",
+                        }}>{d.day}</span>
+                        <span style={{
+                          fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 40,
+                          color: sel ? "black" : "white", lineHeight: 1,
+                        }}>{d.num}</span>
+                        <span style={{
+                          fontFamily: "Inter, sans-serif", fontSize: 11, fontWeight: 500,
+                          letterSpacing: 0.5,
+                          color: sel ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)",
+                        }}>{d.month}</span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                {/* Time tiles — 2-column grid */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
+                }}>
+                  {TIME_OPTIONS.map((t, i) => {
+                    const sel = time === t;
+                    return (
+                      <motion.button
+                        key={t}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.28, delay: i * 0.06 }}
+                        onClick={() => setTime(t)}
+                        whileTap={{ scale: 0.93 }}
+                        style={{
+                          height: 66, borderRadius: 12,
+                          border: "1px solid white",
+                          background: sel ? "white" : "black",
+                          cursor: "pointer", display: "flex",
+                          flexDirection: "column", alignItems: "center",
+                          justifyContent: "center", gap: 3,
+                        }}
+                      >
+                        <span style={{
+                          fontFamily: "Spectral, serif",
+                          fontWeight: sel ? 700 : 500,
+                          fontSize: 20,
+                          color: sel ? "black" : "white",
+                          letterSpacing: -0.3,
+                        }}>{t}</span>
                       </motion.button>
                     );
                   })}

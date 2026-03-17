@@ -6,6 +6,8 @@ import imgGrapefruit from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.
 
 interface CartScreenProps {
   onApplePay: () => void;
+  budgetPerHead?: number;
+  guests?: number;
 }
 
 const ITEM_LABEL: React.CSSProperties = {
@@ -42,7 +44,8 @@ function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price
   );
 }
 
-export function CartScreen({ onApplePay }: CartScreenProps) {
+export function CartScreen({ onApplePay, budgetPerHead = 60, guests = 6 }: CartScreenProps) {
+  const total = (budgetPerHead * guests).toFixed(2);
   return (
     <motion.div
       key="cart-sheet"
@@ -152,7 +155,7 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
         {/* Total row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>TOTAL</p>
-          <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>$79.94</p>
+          <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>${total}</p>
         </div>
 
         {/* Checkout */}

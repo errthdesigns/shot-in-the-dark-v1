@@ -638,10 +638,9 @@ export function PartyPlannerScreen() {
   };
 
   const handleContinue = () => {
-    if (current.view === "email" && lastEmail) {
-      // Wait for any ongoing voice line to finish before advancing so it isn't cut off
-      getSpeechPromise().then(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)));
-    }
+    if (current.view !== "email" || !lastEmail) return;
+    const emailStep = step; // capture so double-tap can't advance past cart
+    getSpeechPromise().then(() => setStep((s) => s === emailStep ? Math.min(s + 1, STEPS.length - 1) : s));
   };
 
   // Direct step jump for the "Continue with Apple Pay" button (bypasses mic cycle)

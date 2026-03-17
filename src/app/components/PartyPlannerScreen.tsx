@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
+import { VideoScreen } from "./VideoScreen";
+import { NameScreen } from "./NameScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
@@ -34,8 +36,6 @@ import imgDrinkK from "figma:asset/5b873ac3b3d33a7fc5b92bb7718e0bacd44d94b3.png"
 import imgDrinkL from "figma:asset/5d7e916fcf23b5e34746902373fb092a3decd6e7.png";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
-import imgVideoFrame from "figma:asset/a801057e54da16ed98c5ecb3d99195543f0ac4fe.png";
-import videoCocktailReveal from "../../assets/Untitled (71).mp4";
 
 // ── Gatsby theme images ───────────────────────────────────────────────────────
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
@@ -89,7 +89,7 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
-type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build" | "cocktail-video";
+type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build";
 type ViewState = "chat" | "bottle-select" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
@@ -108,41 +108,38 @@ const STEPS: Step[] = [
   { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 1 — date/time question
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 3 — confirmation with tiles
+  // 2 — confirmation with tiles
   { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 4 — invite preview: waits for mic tap before revealing invite at step 5
-  { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 5
-  { aiText: "Like it?", aiY: 85, userText: "Yeah, looks great. Lets send them!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "invite" },
-  // 6 — email
-  { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
-  // 7 — bridge
+  // 3 — bridge
   { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 8 — tone intro, waits for voice to finish before advancing to bottle prompt
+  // 4 — tone intro, waits for voice to finish before advancing to bottle prompt
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 9 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
+  // 5 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
   { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10 — bottle selector: AI speaks while user chooses; tapping a bottle advances
+  // 6 — bottle selector: AI speaks while user chooses; tapping a bottle advances
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 11 — dynamic bottle selection response (text set via getAiText); then ask flavour
+  // 7 — dynamic bottle selection response (text set via getAiText); then ask flavour
   { aiText: "", aiY: 85, userText: "something fruity, maybe orange?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 12 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
+  // 8 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
   { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 13 — still building; "depth"/"spice" keywords trigger more ingredient tiles
+  // 9 — still building; "depth"/"spice" keywords trigger more ingredient tiles
   { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 14 — orange video reveal: dynamic text names the chosen bottle; no voice
-  { aiText: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.", aiY: 340, fontVariant: "semibold-italic", userText: "", imgState: "cocktail-video", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", noVoice: true },
-  // 16 — recipe card with sequential ingredient spawn
+  // 10 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
-  // 17 — shopping cart (mic tap from recipe card advances here)
+  // 12 — invite preview: waits for mic tap before revealing invite
+  { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 13 — invite view: "Like it?"
+  { aiText: "Like it?", aiY: 85, userText: "Yeah, looks great. Lets send them!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "invite" },
+  // 14 — email
+  { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
+  // 15 — shopping cart (mic tap from recipe card advances here)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 18 — apple pay sheet (triggered by "Continue with Apple Pay" button)
+  // 16 — apple pay sheet (triggered by "Continue with Apple Pay" button)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 10;
-const COCKTAIL_REVEAL_STEP = 13;
+const BOTTLE_RESPONSE_STEP = 7;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
@@ -150,16 +147,9 @@ const BOTTLE_RESPONSES: Record<string, string> = {
   blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.\n\nNow — what are you working with flavour-wise?",
 };
 
-const BOTTLE_REVEAL_TEXTS: Record<string, string> = {
-  cristalino: "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Don Julio 70 Cristalino base.",
-  reposado:   "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Reposado base.",
-  blanco:     "Finally.\nYour poison.\nTHE VELVET ALIBI.\nDark. Elevated. Slightly dangerous.\nNot sugary.\nWorthy of a Blanco base.",
-};
-
 function resolveAiText(stepIdx: number, bottle: string | null): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
-  if (stepIdx === COCKTAIL_REVEAL_STEP && bottle)  return BOTTLE_REVEAL_TEXTS[bottle] ?? STEPS[stepIdx].aiText;
-  return STEPS[stepIdx].aiText;
+return STEPS[stepIdx].aiText;
 }
 
 const WAVE_H = [7, 14, 20, 11, 22, 9, 17, 13, 21, 8, 16, 12];
@@ -357,7 +347,12 @@ export function PartyPlannerScreen() {
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
-  // Info-gather tap UI — shown after intro, before main chat
+  // Video plays after intro
+  const [videoActive, setVideoActive]   = useState(false);
+  // Name entry after video
+  const [nameActive, setNameActive]     = useState(false);
+  const [playerName, setPlayerName]     = useState("");
+  // Info-gather tap UI — shown after name entry, before main chat
   const [infoGatherActive, setInfoGatherActive] = useState(false);
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
@@ -494,14 +489,14 @@ export function PartyPlannerScreen() {
 
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
-    if (introActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     clearAll();
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 12-13 window
-    if (step < 12 || step > 13) setBuildKeywords(new Set()); // step 13 is last build step
+    // Reset cocktail-build accumulator when leaving the 8-9 window
+    if (step < 8 || step > 9) setBuildKeywords(new Set()); // step 9 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
@@ -510,7 +505,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
-    if (introActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
     const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
@@ -643,10 +638,9 @@ export function PartyPlannerScreen() {
   };
 
   const handleContinue = () => {
-    if (current.view === "email" && lastEmail) {
-      // Wait for any ongoing voice line to finish before advancing so it isn't cut off
-      getSpeechPromise().then(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)));
-    }
+    if (current.view !== "email" || !lastEmail) return;
+    const emailStep = step; // capture so double-tap can't advance past cart
+    getSpeechPromise().then(() => setStep((s) => s === emailStep ? Math.min(s + 1, STEPS.length - 1) : s));
   };
 
   // Direct step jump for the "Continue with Apple Pay" button (bypasses mic cycle)
@@ -667,7 +661,7 @@ export function PartyPlannerScreen() {
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
-        {!showGallery && current.imgState !== "cocktail-video" && current.view === "chat" && (
+        {!showGallery && current.view === "chat" && (
           <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
             style={{ position: "absolute", inset: 0 }}
           >
@@ -717,31 +711,6 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Cocktail-video: orange full-bleed background for the "Finally" reveal ── */}
-      <AnimatePresence>
-        {current.imgState === "cocktail-video" && (
-          <motion.div key="cocktail-video"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.9, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
-          >
-            {/* Solid fallback so it's never pure black while image/video loads */}
-            <div style={{ position: "absolute", inset: 0, backgroundColor: "#3a1500" }} />
-            {/* Orange image as fallback below video */}
-            <img src={imgVideoFrame} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-            {/* Actual video — plays once at full length with volume; no loop so it isn't cut off */}
-            <video
-              autoPlay playsInline controlsList="nodownload"
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", maxWidth: "none" }}
-              src={videoCocktailReveal}
-              onEnded={() => setPhase("ready")}
-            />
-            {/* Gradient so text is legible over the bright orange */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.25) 65%, rgba(0,0,0,0.88) 100%)" }} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ── Recipe card ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "recipe" && (
@@ -758,7 +727,7 @@ export function PartyPlannerScreen() {
       {/* ── Cart screen ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "cart" && (
-          <CartScreen key="cart" onApplePay={handleApplePay} />
+          <CartScreen key="cart" onApplePay={handleApplePay} budgetPerHead={partyDetails?.budgetPerHead} guests={partyDetails?.guests} />
         )}
       </AnimatePresence>
 
@@ -995,21 +964,21 @@ export function PartyPlannerScreen() {
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isThinking && !isBottleSelect && current.imgState !== "cocktail-video" && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
+        {isThinking && !isBottleSelect && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
       </AnimatePresence>
 
-      {/* ── Ambient glow while AI types (hidden on cocktail-video) ──────────────── */}
+      {/* ── Ambient glow while AI types ──────────────────────────────────────── */}
       <AnimatePresence>
-        {phase === "ai_typing" && current.imgState !== "cocktail-video" && !isBottleSelect && (
+        {phase === "ai_typing" && !isBottleSelect && (
           <motion.div key="glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
             style={{ position: "absolute", left: "50%", top: current.aiY, transform: "translate(-50%,-50%)", width: 320, height: 120, borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,255,255,0.045) 0%, transparent 70%)", pointerEvents: "none" }}
           />
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on cocktail-video and bottle-select; voice plays but no overlay) ── */}
+      {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && current.imgState !== "cocktail-video" && !isBottleSelect && (
+        {!isThinking && aiDisplay && !isBottleSelect && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={isEmailStep
@@ -1140,14 +1109,50 @@ export function PartyPlannerScreen() {
             transition={{ duration: 1.1, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, backgroundColor: "#000", zIndex: 200, borderRadius: 21 }}
           >
-            <IntroScreen onComplete={() => { setIntroActive(false); setInfoGatherActive(true); }} />
+            <IntroScreen onComplete={() => { setIntroActive(false); setVideoActive(true); }} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Info-gather tap UI — shown after intro, before main chat ───────────── */}
+      {/* ── Video overlay — plays after intro ─────────────────────────────────── */}
       <AnimatePresence>
-        {infoGatherActive && !introActive && (
+        {videoActive && (
+          <motion.div
+            key="video-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 190, borderRadius: 21 }}
+          >
+            <VideoScreen onComplete={() => { setVideoActive(false); setNameActive(true); }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Name entry — shown after video ────────────────────────────────────── */}
+      <AnimatePresence>
+        {nameActive && (
+          <motion.div
+            key="name-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 180, borderRadius: 21 }}
+          >
+            <NameScreen onComplete={(name) => {
+              setPlayerName(name);
+              setNameActive(false);
+              setInfoGatherActive(true);
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Info-gather tap UI — shown after name entry, before main chat ──────── */}
+      <AnimatePresence>
+        {infoGatherActive && !nameActive && (
           <motion.div
             key="info-gather-overlay"
             initial={{ opacity: 1 }}
@@ -1155,11 +1160,14 @@ export function PartyPlannerScreen() {
             transition={{ duration: 0.9, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, zIndex: 150, borderRadius: 21 }}
           >
-            <InfoGatherScreen onComplete={(details) => {
-              setPartyDetails(details);
-              setInfoGatherActive(false);
-              setStep(3); // skip typed Q&A steps 0-2, jump to invite preview
-            }} />
+            <InfoGatherScreen
+              playerName={playerName}
+              onComplete={(details) => {
+                setPartyDetails(details);
+                setInfoGatherActive(false);
+                setStep(3);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

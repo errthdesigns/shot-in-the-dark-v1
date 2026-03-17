@@ -20,7 +20,9 @@ function ensureAnalyser(): void {
   if (_analyser) return;
   try {
     const el = getEl();
-    _audioCtx = new AudioContext();
+    // Reuse the AudioContext created in unlockAudio() (inside user gesture).
+    // Never create a new one here — a context created outside a gesture is blocked by browsers.
+    if (!_audioCtx) _audioCtx = new AudioContext();
     _analyser = _audioCtx.createAnalyser();
     _analyser.fftSize = 128;
     _analyser.smoothingTimeConstant = 0.82;
@@ -40,6 +42,15 @@ function revokeCurrent() {
 }
 export function unlockAudio(): void {
   const el = getEl(); el.src = SILENT_WAV; el.volume = 0; el.play().catch(() => {});
+  // Create the AudioContext inside the user-gesture handler so browsers (esp. iOS)
+  // mark it as "allowed". Don't create the MediaElementSource here — that happens
+  // lazily in ensureAnalyser() on the first speakText call.
+  if (!_audioCtx) {
+    try {
+      _audioCtx = new AudioContext();
+    } catch (_) { /* ignore */ }
+  }
+  _audioCtx?.resume().catch(() => {});
 }
 export function stopSpeech(): void {
   _gen++;
@@ -74,6 +85,10 @@ function toSSML(text: string): string {
 export async function speakText(text: string): Promise<void> {
   if (!text.trim()) return;
   ensureAnalyser();
+  // Ensure AudioContext is running — it can be auto-suspended by the browser
+  if (_audioCtx && _audioCtx.state !== "running") {
+    await _audioCtx.resume().catch(() => {});
+  }
   stopSpeech();
   const myGen = _gen;
   const controller = new AbortController();
@@ -84,7 +99,7 @@ export async function speakText(text: string): Promise<void> {
       const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
         method: "POST", signal: controller.signal,
         headers: { "xi-api-key": API_KEY, "Content-Type": "application/json", Accept: "audio/mpeg" },
-        body: JSON.stringify({ text: toSSML(text), model_id: "eleven_multilingual_v2", voice_settings: { stability: 1.0, similarity_boost: 0.85, style: 0.0, use_speaker_boost: true } }),
+        body: JSON.stringify({ text: toSSML(text), model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.75, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false } }),
       });
       if (_gen !== myGen) { resolve(); return; }
       if (!res.ok) { console.error("[EL] HTTP", res.status); resolve(); _resolve = null; return; }
@@ -94,6 +109,8 @@ export async function speakText(text: string): Promise<void> {
       const el = getEl(); el.volume = 1; el.src = url;
       el.onended = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
       el.onerror = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
+      // Resume AudioContext in case it was suspended (e.g. after a video plays)
+      await _audioCtx?.resume().catch(() => {});
       await el.play();
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;

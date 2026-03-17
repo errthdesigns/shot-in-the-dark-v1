@@ -734,7 +734,7 @@ export function PartyPlannerScreen() {
       {/* ── Apple Pay sheet ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "apple-pay" && (
-          <ApplePaySheet key="apple-pay" />
+          <ApplePaySheet key="apple-pay" total={(partyDetails?.budgetPerHead ?? 60) * (partyDetails?.guests ?? 6)} />
         )}
       </AnimatePresence>
 

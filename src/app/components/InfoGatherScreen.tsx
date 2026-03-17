@@ -529,12 +529,8 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 1.5 s after last slider change (or 2.5 s after panel entry)
-  useEffect(() => {
-    if (panel !== "budget") return;
-    budgetTimer.current = setTimeout(() => advanceRef.current(), 2500);
-    return () => clearTimeout(budgetTimer.current);
-  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Auto-advance: budget — 1.5 s after the user last moves the slider.
+  // No timer on panel entry; mic button is the fallback if they don't touch the slider.
 
   const PAD = 53;
 

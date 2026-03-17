@@ -54,19 +54,17 @@ function generateDates() {
 const DATES = generateDates();
 
 // ── Panels ─────────────────────────────────────────────────────────────────────
-type Panel = "guests" | "map" | "datetime" | "budget";
-const PANELS: Panel[] = ["guests", "map", "datetime", "budget"];
+type Panel = "guests" | "datetime" | "budget";
+const PANELS: Panel[] = ["guests", "datetime", "budget"];
 
 const QUESTIONS: Record<Panel, string> = {
   guests:   "First up, how many suspects...\nI mean... guests are we expecting??",
-  map:      "Where's the scene being set?\nWhat's your address",
   datetime: "Alrighty, what date and time?",
   budget:   "How deep are your pockets?",
 };
 
 const VOICE_LINES: Record<Panel, string> = {
   guests:   "First up, how many suspects... I mean, guests are we expecting?",
-  map:      "Where's the scene being set? What's your address?",
   datetime: "Alrighty, what date and time are we talking?",
   budget:   "Last question — how deep are the pockets?",
 };
@@ -449,9 +447,7 @@ function PegmanHolder({
 export function InfoGatherScreen({ playerName, onComplete }: Props) {
   const [panelIdx, setPanelIdx] = useState(0);
   const [guests,   setGuests]   = useState<number | null>(null);
-  const [dropPos,  setDropPos]  = useState<{ x: number; y: number } | null>(null);
-  const [isDead,   setIsDead]   = useState(false);
-  const [dateIdx,  setDateIdx]  = useState<number | null>(null);
+const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
   const scrollRef     = useRef<HTMLDivElement>(null);
@@ -476,14 +472,8 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
   }, [dateIdx, panel]);
 
   // When pegman is dropped, trigger dead animation after bounce
-  const handleDrop = (x: number, y: number) => {
-    setDropPos({ x, y });
-    setTimeout(() => setIsDead(true), 380);
-  };
-
   const canAdvance =
     panel === "guests"   ? guests !== null :
-    panel === "map"      ? isDead :
     panel === "datetime" ? dateIdx !== null && time !== null :
     true;
 
@@ -514,13 +504,6 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
     const id = setTimeout(() => setPanelIdx(p => p + 1), 500);
     return () => clearTimeout(id);
   }, [guests, panel]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-advance: map — wait for banner to appear
-  useEffect(() => {
-    if (panel !== "map" || !isDead) return;
-    const id = setTimeout(() => setPanelIdx(p => p + 1), 1400);
-    return () => clearTimeout(id);
-  }, [isDead, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-advance: datetime — both date and time selected
   useEffect(() => {
@@ -632,52 +615,6 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
             )}
 
             {/* ── MAP ── */}
-            {panel === "map" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
-                {/* Pegman source + instruction row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <PegmanHolder onDragToMap={handleDrop} dropped={isDead} />
-                  {!isDead && (
-                    <p style={{
-                      fontFamily: "Inter, sans-serif", fontSize: 12,
-                      color: "rgba(255,255,255,0.5)", lineHeight: 1.4,
-                      margin: 0, flex: 1,
-                    }}>
-                      Drag the figure onto the map — or just tap to drop
-                    </p>
-                  )}
-                  {isDead && (
-                    <motion.p
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      style={{
-                        fontFamily: "Spectral, serif", fontSize: 14,
-                        color: "rgba(255,255,255,0.7)", lineHeight: 1.4,
-                        margin: 0, flex: 1, fontStyle: "italic",
-                      }}
-                    >
-                      Perfect. We'll start the trail from {playerName ? `${playerName}'s` : "your"} place.
-                    </motion.p>
-                  )}
-                </div>
-
-                {/* Map */}
-                <div id="texas-map-drop">
-                  <TexasMap
-                    playerName={playerName}
-                    onDrop={handleDrop}
-                    dropPos={dropPos}
-                    isDead={isDead}
-                  />
-                </div>
-              </motion.div>
-            )}
-
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
+import { VideoScreen } from "./VideoScreen";
+import { NameScreen } from "./NameScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
@@ -357,7 +359,12 @@ export function PartyPlannerScreen() {
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
-  // Info-gather tap UI — shown after intro, before main chat
+  // Video plays after intro
+  const [videoActive, setVideoActive]   = useState(false);
+  // Name entry after video
+  const [nameActive, setNameActive]     = useState(false);
+  const [playerName, setPlayerName]     = useState("");
+  // Info-gather tap UI — shown after name entry, before main chat
   const [infoGatherActive, setInfoGatherActive] = useState(false);
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
@@ -494,7 +501,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
-    if (introActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     clearAll();
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
@@ -510,7 +517,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
-    if (introActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
     const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
@@ -1140,14 +1147,50 @@ export function PartyPlannerScreen() {
             transition={{ duration: 1.1, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, backgroundColor: "#000", zIndex: 200, borderRadius: 21 }}
           >
-            <IntroScreen onComplete={() => { setIntroActive(false); setInfoGatherActive(true); }} />
+            <IntroScreen onComplete={() => { setIntroActive(false); setVideoActive(true); }} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Info-gather tap UI — shown after intro, before main chat ───────────── */}
+      {/* ── Video overlay — plays after intro ─────────────────────────────────── */}
       <AnimatePresence>
-        {infoGatherActive && !introActive && (
+        {videoActive && (
+          <motion.div
+            key="video-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 190, borderRadius: 21 }}
+          >
+            <VideoScreen onComplete={() => { setVideoActive(false); setNameActive(true); }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Name entry — shown after video ────────────────────────────────────── */}
+      <AnimatePresence>
+        {nameActive && (
+          <motion.div
+            key="name-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 180, borderRadius: 21 }}
+          >
+            <NameScreen onComplete={(name) => {
+              setPlayerName(name);
+              setNameActive(false);
+              setInfoGatherActive(true);
+            }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Info-gather tap UI — shown after name entry, before main chat ──────── */}
+      <AnimatePresence>
+        {infoGatherActive && !nameActive && (
           <motion.div
             key="info-gather-overlay"
             initial={{ opacity: 1 }}
@@ -1155,11 +1198,14 @@ export function PartyPlannerScreen() {
             transition={{ duration: 0.9, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, zIndex: 150, borderRadius: 21 }}
           >
-            <InfoGatherScreen onComplete={(details) => {
-              setPartyDetails(details);
-              setInfoGatherActive(false);
-              setStep(3); // skip typed Q&A steps 0-2, jump to invite preview
-            }} />
+            <InfoGatherScreen
+              playerName={playerName}
+              onComplete={(details) => {
+                setPartyDetails(details);
+                setInfoGatherActive(false);
+                setStep(3);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

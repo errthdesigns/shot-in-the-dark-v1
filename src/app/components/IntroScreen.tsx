@@ -8,8 +8,7 @@ import { AudioReactiveGradient } from "./AudioReactiveGradient";
 
 const CHUNKS = [
   "So… I see you're planning a murder...",
-  "This is Shot in the Dark —\na murder mystery tequila night.",
-  "I'll be your host, helping you invite the suspects,\nplan the twists…\nand of course, the drinks.",
+  "You've come to the right place.",
 ];
 
 // Short silence (ms) between audio ending and text starting to exit

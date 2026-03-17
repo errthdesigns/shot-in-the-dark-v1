@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
+import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
 import { CartScreen } from "./CartScreen";
@@ -356,6 +357,9 @@ export function PartyPlannerScreen() {
   const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
+  // Info-gather tap UI — shown after intro, before main chat
+  const [infoGatherActive, setInfoGatherActive] = useState(false);
+  const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
@@ -1136,7 +1140,26 @@ export function PartyPlannerScreen() {
             transition={{ duration: 1.1, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0, backgroundColor: "#000", zIndex: 200, borderRadius: 21 }}
           >
-            <IntroScreen onComplete={() => setIntroActive(false)} />
+            <IntroScreen onComplete={() => { setIntroActive(false); setInfoGatherActive(true); }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Info-gather tap UI — shown after intro, before main chat ───────────── */}
+      <AnimatePresence>
+        {infoGatherActive && !introActive && (
+          <motion.div
+            key="info-gather-overlay"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 150, borderRadius: 21 }}
+          >
+            <InfoGatherScreen onComplete={(details) => {
+              setPartyDetails(details);
+              setInfoGatherActive(false);
+              setStep(3); // skip typed Q&A steps 0-2, jump to invite preview
+            }} />
           </motion.div>
         )}
       </AnimatePresence>

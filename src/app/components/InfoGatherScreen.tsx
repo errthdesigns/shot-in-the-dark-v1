@@ -20,6 +20,7 @@ interface Props { onComplete: (d: PartyDetails) => void; }
 const GUEST_OPTIONS = [6, 7, 8, 9, 10, 11] as const; // 11 renders as "11+"
 const AREA_OPTIONS  = ["Central", "North", "South", "East", "West", "Surprise Me"] as const;
 const TIME_OPTIONS  = ["5:00pm", "6:00pm", "7:00pm", "8:00pm", "9:00pm", "10:00pm"] as const;
+const TEXAS_CITIES  = ["Austin", "Dallas", "Houston", "San Antonio", "Fort Worth", "San Marcos"] as const;
 
 function ordinal(n: number): string {
   if ([11, 12, 13].includes(n % 100)) return `${n}th`;
@@ -51,14 +52,25 @@ function generateDates() {
 
 const DATES = generateDates();
 
+// ── Venue suggestions per city ────────────────────────────────────────────────
+const VENUE_SUGGESTIONS: Record<string, { name: string; type: string; rating: number; distance: string; desc: string }[]> = {
+  Austin:        [{ name: "The Elephant Room", type: "Jazz Bar", rating: 4.7, distance: "0.3mi", desc: "Underground jazz den with killer cocktails and a dark, moody vibe." }],
+  Dallas:        [{ name: "The Rustic",         type: "Outdoor Bar", rating: 4.6, distance: "0.8mi", desc: "Sprawling outdoor venue with live music and a massive whiskey selection." }],
+  Houston:       [{ name: "The Pastry War",     type: "Mezcal Bar", rating: 4.8, distance: "0.5mi", desc: "Award-winning mezcal bar hidden in the heart of downtown Houston." }],
+  "San Antonio": [{ name: "The Esquire Tavern", type: "Historic Bar", rating: 4.7, distance: "0.4mi", desc: "San Antonio's oldest bar on the River Walk, pouring since 1933." }],
+  "Fort Worth":  [{ name: "Righteous",          type: "Craft Bar",   rating: 4.5, distance: "0.6mi", desc: "Craft cocktails and southern hospitality in Fort Worth's Sundance Square." }],
+  "San Marcos":  [{ name: "The Junction",       type: "River Bar",   rating: 4.4, distance: "0.7mi", desc: "Breezy river-side bar perfect for a mysterious night with friends." }],
+};
+
 // ── Panels ────────────────────────────────────────────────────────────────────
-type Panel = "name" | "guests" | "location" | "datetime" | "budget";
-const PANELS: Panel[] = ["name", "guests", "location", "datetime", "budget"];
+type Panel = "name" | "guests" | "location" | "venue" | "datetime" | "budget";
+const PANELS: Panel[] = ["name", "guests", "location", "venue", "datetime", "budget"];
 
 const QUESTIONS: Record<Panel, string> = {
   name:     "First things first,\nwhat do they call you?",
   guests:   "First up, how many suspects...\nI mean... guests are we expecting??",
   location: "Where's the scene being set?",
+  venue:    "Pick your poison...\nwhere shall we strike?",
   datetime: "Alrighty, what date and time?",
   budget:   "How deep are your pockets?",
 };
@@ -67,18 +79,17 @@ const VOICE_LINES: Record<Panel, string> = {
   name:     "First things first — what do they call you?",
   guests:   "First up, how many suspects... I mean, guests are we expecting?",
   location: "And where's the scene being set?",
+  venue:    "Pick your poison — where shall we strike?",
   datetime: "Alrighty, what date and time are we talking?",
   budget:   "Last question — how deep are the pockets?",
 };
 
 // ── Shared styles (Figma spec) ────────────────────────────────────────────────
-// Inner phone width: 394px. Padding 53px each side → content = 288px.
-// 2-col grid, gap 12px → tile = (288-12)/2 = 138px.
-const PAD = 53;         // left/right padding
-const TILE_W = 138;     // tile width
-const GAP    = 12;      // grid gap
-const TILE_H_LG = 72;   // guest tile height
-const TILE_H_SM = 60;   // location / time tile height
+const PAD = 53;
+const TILE_W = 138;
+const GAP    = 12;
+const TILE_H_LG = 72;
+const TILE_H_SM = 60;
 
 const HEADING: React.CSSProperties = {
   fontFamily: "Spectral, serif",
@@ -129,12 +140,120 @@ function tileStyle(selected: boolean, h: number): React.CSSProperties {
   };
 }
 
+// ── Texas Map SVG Component ───────────────────────────────────────────────────
+function TexasMap({ city }: { city: string }) {
+  // Skull pin positions (venue markers) keyed loosely by city
+  const skullPins: { x: number; y: number }[] = [
+    { x: 140, y: 95 },
+    { x: 210, y: 130 },
+    { x: 100, y: 155 },
+    { x: 260, y: 85 },
+  ];
+  const userPos = { x: 185, y: 145 };
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: 200, borderRadius: 14, overflow: "hidden" }}>
+      <svg
+        width="100%"
+        height="200"
+        viewBox="0 0 320 200"
+        style={{ display: "block", background: "#1a1a1a" }}
+      >
+        {/* Dark map base */}
+        <rect width="320" height="200" fill="#1a1a1a" />
+
+        {/* Park / green areas */}
+        <rect x="30" y="20" width="60" height="40" rx="4" fill="#1f2b1f" />
+        <rect x="200" y="100" width="50" height="35" rx="4" fill="#1f2b1f" />
+        <rect x="140" y="160" width="80" height="30" rx="4" fill="#1f2b1f" />
+
+        {/* Water / river winding at bottom */}
+        <path
+          d="M0 175 Q40 165 80 178 Q120 190 160 172 Q200 155 240 168 Q280 180 320 165"
+          fill="none" stroke="#1e3a4a" strokeWidth="14" strokeLinecap="round"
+        />
+
+        {/* Street grid — horizontal */}
+        {[40, 65, 90, 115, 140].map((y, i) => (
+          <line key={`h${i}`} x1="0" y1={y} x2="320" y2={y}
+            stroke="#2e2e2e" strokeWidth={i % 2 === 0 ? 2 : 1} />
+        ))}
+        {/* Street grid — vertical */}
+        {[50, 95, 140, 185, 230, 275].map((x, i) => (
+          <line key={`v${i}`} x1={x} y1="0" x2={x} y2="200"
+            stroke="#2e2e2e" strokeWidth={i % 3 === 0 ? 2 : 1} />
+        ))}
+
+        {/* Major road highlights */}
+        <line x1="0" y1="90" x2="320" y2="90" stroke="#3a3a3a" strokeWidth="3" />
+        <line x1="140" y1="0" x2="140" y2="200" stroke="#3a3a3a" strokeWidth="3" />
+
+        {/* City label */}
+        <text x="160" y="16" textAnchor="middle"
+          fontFamily="Inter, sans-serif" fontSize="9" fontWeight="700"
+          letterSpacing="2" fill="rgba(255,255,255,0.3)" textTransform="uppercase">
+          {city.toUpperCase()}
+        </text>
+
+        {/* User position marker background circle */}
+        <circle cx={userPos.x} cy={userPos.y} r="14" fill="rgba(151,21,26,0.35)" />
+        <circle cx={userPos.x} cy={userPos.y} r="8" fill="rgba(151,21,26,0.7)" />
+      </svg>
+
+      {/* Skull pins — absolutely positioned over SVG */}
+      {skullPins.map((p, i) => (
+        <div
+          key={i}
+          style={{
+            position: "absolute",
+            left: `${(p.x / 320) * 100}%`,
+            top: `${(p.y / 200) * 100}%`,
+            transform: "translate(-50%, -50%)",
+            fontSize: 18,
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.8))",
+            zIndex: 2,
+          }}
+        >
+          💀
+        </div>
+      ))}
+
+      {/* User character marker */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${(userPos.x / 320) * 100}%`,
+          top: `${(userPos.y / 200) * 100}%`,
+          transform: "translate(-50%, -50%)",
+          fontSize: 20,
+          filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.9))",
+          zIndex: 3,
+        }}
+      >
+        🧍
+      </div>
+
+      {/* Subtle vignette overlay */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%)",
+        borderRadius: 14,
+        pointerEvents: "none",
+        zIndex: 4,
+      }} />
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function InfoGatherScreen({ onComplete }: Props) {
   const [panelIdx, setPanelIdx] = useState(0);
   const [name,     setName]     = useState("");
   const [guests,   setGuests]   = useState<number | null>(null);
+  const [city,     setCity]     = useState<string>("Austin");
+  const [cityOpen, setCityOpen] = useState(false);
   const [area,     setArea]     = useState<string | null>(null);
+  const [venueIdx, setVenueIdx] = useState(0);
   const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
@@ -162,10 +281,14 @@ export function InfoGatherScreen({ onComplete }: Props) {
     }
   }, [dateIdx, panel]);
 
+  // Reset venue index when city changes
+  useEffect(() => { setVenueIdx(0); }, [city]);
+
   const canAdvance =
     panel === "name"     ? name.trim().length > 0 :
     panel === "guests"   ? guests !== null :
     panel === "location" ? area !== null :
+    panel === "venue"    ? true :
     panel === "datetime" ? dateIdx !== null && time !== null :
     true; // budget always OK
 
@@ -186,6 +309,9 @@ export function InfoGatherScreen({ onComplete }: Props) {
       });
     }
   }
+
+  const venues = VENUE_SUGGESTIONS[city] ?? VENUE_SUGGESTIONS["Austin"];
+  const venue  = venues[venueIdx % venues.length];
 
   return (
     <div className="info-gather" style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
@@ -313,7 +439,7 @@ export function InfoGatherScreen({ onComplete }: Props) {
                         fontSize: 8,
                         letterSpacing: 2.24,
                         textTransform: "uppercase",
-                        color: sel ? "#6f6f6f" : "#6f6f6f",
+                        color: "#6f6f6f",
                       }}>
                         GUESTS
                       </span>
@@ -326,39 +452,95 @@ export function InfoGatherScreen({ onComplete }: Props) {
             {/* LOCATION ─────────────────────────────────────────────────── */}
             {panel === "location" && (
               <div>
-                {/* City "dropdown" */}
+                {/* City dropdown */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: 0.1 }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingBottom: 12,
-                    marginBottom: 16,
-                    borderBottom: "1px solid rgba(255,255,255,0.25)",
-                  }}
+                  style={{ position: "relative", marginBottom: 16 }}
                 >
-                  <span style={{
-                    fontFamily: "Inter, sans-serif",
-                    fontSize: 16,
-                    color: "white",
-                    letterSpacing: -0.32,
-                    lineHeight: 2,
-                  }}>
-                    London
-                  </span>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <path d="M5 8L10 13L15 8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <button
+                    onClick={() => setCityOpen(o => !o)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingBottom: 12,
+                      paddingTop: 4,
+                      borderBottom: "1px solid rgba(255,255,255,0.25)",
+                      background: "none",
+                      border: "none",
+                      borderBottom: "1px solid rgba(255,255,255,0.25)",
+                      cursor: "pointer",
+                    } as React.CSSProperties}
+                  >
+                    <span style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: 16,
+                      color: "white",
+                      letterSpacing: -0.32,
+                      lineHeight: 2,
+                    }}>
+                      {city}
+                    </span>
+                    <motion.svg
+                      animate={{ rotate: cityOpen ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      width="20" height="20" viewBox="0 0 20 20" fill="none"
+                    >
+                      <path d="M5 8L10 13L15 8" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </motion.svg>
+                  </button>
+
+                  <AnimatePresence>
+                    {cityOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.18 }}
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          background: "#1a1a1a",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                          borderRadius: 10,
+                          overflow: "hidden",
+                          zIndex: 20,
+                        }}
+                      >
+                        {TEXAS_CITIES.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => { setCity(c); setCityOpen(false); }}
+                            style={{
+                              width: "100%",
+                              textAlign: "left",
+                              padding: "12px 16px",
+                              background: c === city ? "rgba(255,255,255,0.08)" : "transparent",
+                              border: "none",
+                              borderBottom: "1px solid rgba(255,255,255,0.06)",
+                              color: "white",
+                              fontFamily: "Inter, sans-serif",
+                              fontSize: 15,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
 
                 {/* Area tiles */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: GAP }}>
                   {AREA_OPTIONS.map((a, i) => {
                     const sel = area === a;
-                    const isSurprise = a === "Surprise Me";
                     return (
                       <motion.button
                         key={a}
@@ -368,15 +550,15 @@ export function InfoGatherScreen({ onComplete }: Props) {
                         onClick={() => setArea(a)}
                         whileTap={{ scale: 0.94 }}
                         style={{
-                          ...tileStyle(sel || isSurprise, TILE_H_SM),
-                          background: isSurprise ? (sel ? "#8B0000" : "white") : (sel ? "white" : "black"),
+                          ...tileStyle(false, TILE_H_SM),
+                          background: sel ? "white" : "black",
                         }}
                       >
                         <span style={{
                           fontFamily: "Spectral, serif",
-                          fontWeight: isSurprise ? 700 : 500,
+                          fontWeight: 500,
                           fontSize: 20,
-                          color: isSurprise ? (sel ? "white" : "black") : (sel ? "black" : "white"),
+                          color: sel ? "black" : "white",
                           lineHeight: 1,
                         }}>
                           {a}
@@ -386,6 +568,84 @@ export function InfoGatherScreen({ onComplete }: Props) {
                   })}
                 </div>
               </div>
+            )}
+
+            {/* VENUE ────────────────────────────────────────────────────── */}
+            {panel === "venue" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{ display: "flex", flexDirection: "column", gap: 14 }}
+              >
+                {/* Map */}
+                <TexasMap city={city} />
+
+                {/* Venue card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.2 }}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 14,
+                    padding: "14px 16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{
+                      fontFamily: "Spectral, serif",
+                      fontWeight: 600,
+                      fontSize: 18,
+                      color: "white",
+                      letterSpacing: -0.3,
+                    }}>
+                      {venue.name}
+                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 12, color: "#FFD700" }}>★</span>
+                      <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
+                        {venue.rating}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: 1.5,
+                      textTransform: "uppercase",
+                      color: "rgba(151,21,26,0.9)",
+                      background: "rgba(151,21,26,0.15)",
+                      padding: "3px 8px",
+                      borderRadius: 4,
+                    }}>
+                      {venue.type}
+                    </span>
+                    <span style={{
+                      fontFamily: "Inter, sans-serif",
+                      fontSize: 12,
+                      color: "rgba(255,255,255,0.45)",
+                    }}>
+                      {venue.distance} away
+                    </span>
+                  </div>
+                  <p style={{
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.55)",
+                    margin: 0,
+                    lineHeight: 1.5,
+                  }}>
+                    {venue.desc}
+                  </p>
+                </motion.div>
+              </motion.div>
             )}
 
             {/* DATE / TIME ──────────────────────────────────────────────── */}
@@ -491,7 +751,7 @@ export function InfoGatherScreen({ onComplete }: Props) {
                         color: "white",
                       }}
                     >
-                      £{budget}
+                      ${budget}
                     </motion.span>
                   </AnimatePresence>
                   <p style={{
@@ -517,8 +777,8 @@ export function InfoGatherScreen({ onComplete }: Props) {
                     style={{ width: "100%", cursor: "pointer" }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>£20</span>
-                    <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>£200</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$20</span>
+                    <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$200</span>
                   </div>
                 </div>
               </motion.div>
@@ -579,6 +839,7 @@ export function InfoGatherScreen({ onComplete }: Props) {
           cursor: pointer;
         }
         .info-gather input::placeholder { color: rgba(255,255,255,0.3); }
+        .info-gather button:last-child { border-bottom: none !important; }
       `}</style>
     </div>
   );

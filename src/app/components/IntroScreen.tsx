@@ -7,13 +7,9 @@ import { AudioReactiveGradient } from "./AudioReactiveGradient";
 // Text must exactly match what should be spoken — voice duration drives timing.
 
 const CHUNKS = [
-  "Well, well, well...",
-  "Look who just walked into the wrong saloon\nat exactly the right time.",
-  "Welcome to Shot in the Dark.",
-  "Here's how this works. Somebody's dead.\nA room full of suspects.\nAnd the only thing standing between a killer\nand a clean getaway...\nis you.",
-  "I'll help you plan the night, build the drinks,\nand make sure nobody leaves without\na story worth telling.",
-  "The bottle you choose tonight\ndecides how this story ends.",
-  "So.\nYou ready?",
+  "So… I see you're planning a murder...",
+  "This is Shot in the Dark —\na murder mystery tequila night.",
+  "I'll be your host, helping you invite the suspects,\nplan the twists…\nand of course, the drinks.",
 ];
 
 // Short silence (ms) between audio ending and text starting to exit

@@ -40,6 +40,15 @@ function revokeCurrent() {
 }
 export function unlockAudio(): void {
   const el = getEl(); el.src = SILENT_WAV; el.volume = 0; el.play().catch(() => {});
+  // Create the AudioContext inside the user-gesture handler so browsers (esp. iOS)
+  // mark it as "allowed". Don't create the MediaElementSource here — that happens
+  // lazily in ensureAnalyser() on the first speakText call.
+  if (!_audioCtx) {
+    try {
+      _audioCtx = new AudioContext();
+    } catch (_) { /* ignore */ }
+  }
+  _audioCtx?.resume().catch(() => {});
 }
 export function stopSpeech(): void {
   _gen++;

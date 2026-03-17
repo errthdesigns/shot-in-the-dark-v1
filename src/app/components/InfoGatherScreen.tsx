@@ -22,7 +22,7 @@ interface Props {
 
 // ── Options ───────────────────────────────────────────────────────────────────
 const GUEST_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
-const TIME_OPTIONS  = ["7:00pm", "8:00pm", "9:00pm", "10:00pm", "5:00pm", "6:00pm"] as const;
+const TIME_OPTIONS  = ["5:00pm", "6:00pm", "7:00pm", "8:00pm", "9:00pm", "10:00pm"] as const;
 
 function ordinal(n: number): string {
   if ([11, 12, 13].includes(n % 100)) return `${n}th`;
@@ -454,7 +454,10 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
   const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef     = useRef<HTMLDivElement>(null);
+  const budgetTimer   = useRef<ReturnType<typeof setTimeout>>();
+  // Always-fresh ref to advance() so async callbacks never see stale closures
+  const advanceRef    = useRef<() => void>(() => {});
 
   const panel = PANELS[panelIdx];
 
@@ -501,6 +504,37 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
       });
     }
   };
+
+  // Keep ref fresh so timeout callbacks always call the latest advance()
+  advanceRef.current = advance;
+
+  // Auto-advance: guests — short delay for visual feedback
+  useEffect(() => {
+    if (panel !== "guests" || guests === null) return;
+    const id = setTimeout(() => setPanelIdx(p => p + 1), 500);
+    return () => clearTimeout(id);
+  }, [guests, panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance: map — wait for banner to appear
+  useEffect(() => {
+    if (panel !== "map" || !isDead) return;
+    const id = setTimeout(() => setPanelIdx(p => p + 1), 1400);
+    return () => clearTimeout(id);
+  }, [isDead, panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance: datetime — both date and time selected
+  useEffect(() => {
+    if (panel !== "datetime" || dateIdx === null || time === null) return;
+    const id = setTimeout(() => setPanelIdx(p => p + 1), 500);
+    return () => clearTimeout(id);
+  }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance: budget — 1.5 s after last slider change (or 2.5 s after panel entry)
+  useEffect(() => {
+    if (panel !== "budget") return;
+    budgetTimer.current = setTimeout(() => advanceRef.current(), 2500);
+    return () => clearTimeout(budgetTimer.current);
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PAD = 53;
 
@@ -772,7 +806,11 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
                   <input
                     type="range" min={20} max={200} step={10}
                     value={budget}
-                    onChange={e => setBudget(Number(e.target.value))}
+                    onChange={e => {
+                      setBudget(Number(e.target.value));
+                      clearTimeout(budgetTimer.current);
+                      budgetTimer.current = setTimeout(() => advanceRef.current(), 1500);
+                    }}
                     style={{ width: "100%", cursor: "pointer" }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>

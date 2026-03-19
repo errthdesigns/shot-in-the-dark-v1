@@ -39,6 +39,7 @@ import imgPalomaGrapefruit from "../../assets/Grapefruit.png";
 import imgPalomaLime       from "../../assets/Lime.png";
 import imgPalomaAgave      from "../../assets/Agave.png";
 import imgPalomaCilantro   from "../../assets/Cilantro.png";
+import imgPalomaClubSoda   from "../../assets/soda.png";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
 
@@ -354,7 +355,7 @@ const PALOMA_ITEMS = [
   { src: imgPalomaLime,       label: "Lime",          tagColor: "#4AB856" },
   { src: imgPalomaAgave,      label: "Agave Nectar",  tagColor: "#C8820A" },
   { src: imgPalomaCilantro,   label: "Cilantro",      tagColor: "#27AE60" },
-  { src: imgDrinkC,           label: "Club Soda",     tagColor: "#E06020" },
+  { src: imgPalomaClubSoda,   label: "Club Soda",     tagColor: "#E06020" },
 ] as const;
 
 // ── Flavor suggest — just the "Happy?" button overlay; tiles live in AutoGallery tileSlots ──

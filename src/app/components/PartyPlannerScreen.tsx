@@ -122,7 +122,7 @@ const STEPS: Step[] = [
   // 8 — cocktail video (Untitled 71); advances automatically when video ends
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
   // 9 — shopping cart
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart", noVoice: true },
+  { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
   // 10 — apple pay sheet (triggered by "Continue with Apple Pay" button)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
@@ -816,7 +816,7 @@ export function PartyPlannerScreen() {
 
       {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isBottleSelect && (
+        {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 352, textAlign: "center" }}

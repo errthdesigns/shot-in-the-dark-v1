@@ -67,7 +67,7 @@ const QUESTIONS: Record<Panel, string> = {
 const VOICE_LINES: Record<Panel, string> = {
   guests:   "First up, how many suspects... I mean, guests are we expecting?",
   address:  "Where's the scene being set? Drop your pin on the map.",
-  datetime: "Alrighty, what date and time are we talking?",
+  datetime: "Alrighty, what date are we talking?",
   budget:   "Last question — how deep are the pockets?",
 };
 
@@ -526,8 +526,12 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 1.5 s after the user last moves the slider.
-  // No timer on panel entry; mic button is the fallback if they don't touch the slider.
+  // Auto-advance: budget — 1.5 s after slider movement, or 4 s after panel entry.
+  useEffect(() => {
+    if (panel !== "budget") return;
+    const id = setTimeout(() => advanceRef.current(), 4000);
+    return () => clearTimeout(id);
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PAD = 53;
 
@@ -802,63 +806,6 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         </motion.div>
       </AnimatePresence>
 
-      {/* ── Bottom bar: X · Mic · Grid ── */}
-      {/* X button */}
-      <div style={{
-        position: "absolute", left: 107, top: 778, width: 45, height: 45,
-        borderRadius: 22.5, border: "1px dashed #838383",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", zIndex: 20,
-      }}>
-        <XIcon />
-      </div>
-
-      {/* Ready pulse ring */}
-      <AnimatePresence>
-        {canAdvance && (
-          <motion.div
-            key={`ring-${panel}`}
-            style={{
-              position: "absolute", left: 160, top: 759, width: 82, height: 82,
-              borderRadius: 41, border: "1.5px solid rgba(255,255,255,0.28)",
-              pointerEvents: "none", zIndex: 19,
-            }}
-            animate={{ scale: [1, 1.55], opacity: [0.55, 0] }}
-            transition={{ duration: 1.3, repeat: Infinity, ease: "easeOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mic / advance button */}
-      <motion.button
-        onClick={advance}
-        disabled={!canAdvance}
-        style={{
-          position: "absolute", left: 168, top: 767, width: 66, height: 66,
-          borderRadius: 33, border: "none",
-          cursor: canAdvance ? "pointer" : "default",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "16px 22px", boxSizing: "border-box", zIndex: 20,
-        }}
-        animate={{
-          backgroundColor: canAdvance ? ["#383838", "#444", "#383838"] : "#383838",
-          opacity: canAdvance ? 1 : 0.45,
-        }}
-        transition={canAdvance ? { duration: 2.2, repeat: Infinity } : {}}
-        whileTap={canAdvance ? { scale: 0.88 } : {}}
-      >
-        <MicIcon />
-      </motion.button>
-
-      {/* Grid button */}
-      <div style={{
-        position: "absolute", left: 250, top: 778, width: 45, height: 45,
-        borderRadius: 22.5, border: "1px dashed #838383",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", zIndex: 20,
-      }}>
-        <GridIcon />
-      </div>
 
       {/* Slider styles */}
       <style>{`

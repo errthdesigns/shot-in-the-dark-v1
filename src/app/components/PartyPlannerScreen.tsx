@@ -122,9 +122,9 @@ const STEPS: Step[] = [
   // 8 — cocktail video (Untitled 71); advances automatically when video ends
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
   // 9 — shopping cart
-  { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart", noVoice: true },
   // 10 — apple pay sheet (triggered by "Continue with Apple Pay" button)
-  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
@@ -775,7 +775,8 @@ export function PartyPlannerScreen() {
           <ApplePaySheet
             key="apple-pay"
             total={calcCartTotal(partyDetails?.guests ?? 6)}
-            date={partyDetails ? `${partyDetails.date} at ${partyDetails.time}` : "the night"}
+            date={partyDetails?.date ?? "the night"}
+            name={playerName || "Riley Jones"}
           />
         )}
       </AnimatePresence>

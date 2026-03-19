@@ -400,59 +400,63 @@ function FlavorPicker({ options, selected, onToggle, onConfirm }: {
         perspective: "1100px",
         perspectiveOrigin: "50% 46%",
       }}>
-        <div style={{ position: "absolute", left: "50%", top: "48%", transformStyle: "preserve-3d" }}>
+        <div style={{ position: "absolute", left: "50%", top: "48%" }}>
           {options.map((opt, i) => {
             const pos = FLAVOR_VOID_POSITIONS[i];
             const sel = selected.includes(opt.id);
             return (
-              <motion.button
+              // Outer div: static void position (translateX/Y + rotateZ) — never touched by Framer Motion
+              <div
                 key={opt.id}
-                onClick={() => onToggle(opt.id)}
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{
-                  opacity: 1, scale: 1,
-                  y: [0, -pos.floatAmt, 0],
-                }}
-                transition={{
-                  opacity: { duration: 0.4, delay: pos.delay },
-                  scale:   { duration: 0.55, delay: pos.delay, ease: [0.34, 1.56, 0.64, 1] },
-                  y:       { duration: pos.dur, repeat: Infinity, ease: "easeInOut", delay: pos.delay + 0.5, repeatType: "mirror" },
-                }}
-                whileTap={{ scale: 0.93 }}
                 style={{
                   position: "absolute",
                   width: pos.w, height: pos.h,
                   marginLeft: -pos.w / 2,
-                  marginTop: -pos.h / 2,
+                  marginTop:  -pos.h / 2,
                   transform: `translateX(${pos.x}px) translateY(${pos.y}px) rotateZ(${pos.rotZ}deg)`,
-                  borderRadius: 12,
-                  overflow: "hidden",
-                  border: sel ? "2.5px solid rgba(255,255,255,0.95)" : "1.5px solid rgba(255,255,255,0.10)",
-                  background: "none", cursor: "pointer", padding: 0,
-                  boxShadow: sel ? "0 0 0 3px rgba(255,255,255,0.18)" : "none",
-                  transition: "border 0.2s, box-shadow 0.2s",
                 }}
               >
-                <img
-                  src={opt.src} alt={opt.label}
-                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
-                />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
-                {sel && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
-                  >
-                    <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </motion.div>
-                )}
-                <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
-                  {opt.label}
-                </p>
-              </motion.button>
+                {/* Inner motion.button: handles pop-in + float — owns its own transform axis */}
+                <motion.button
+                  onClick={() => onToggle(opt.id)}
+                  initial={{ opacity: 0, scale: 0.7, y: 0 }}
+                  animate={{ opacity: 1, scale: 1, y: [0, -pos.floatAmt, 0] }}
+                  transition={{
+                    opacity: { duration: 0.4, delay: pos.delay },
+                    scale:   { duration: 0.55, delay: pos.delay, ease: [0.34, 1.56, 0.64, 1] },
+                    y:       { duration: pos.dur, repeat: Infinity, ease: "easeInOut", delay: pos.delay + 0.6, repeatType: "mirror" },
+                  }}
+                  whileTap={{ scale: 0.93 }}
+                  style={{
+                    display: "block", width: "100%", height: "100%",
+                    borderRadius: 12, overflow: "hidden",
+                    border: sel ? "2.5px solid rgba(255,255,255,0.92)" : "1.5px solid rgba(255,255,255,0.12)",
+                    boxShadow: sel ? "0 0 0 3px rgba(255,255,255,0.16)" : "none",
+                    background: "none", cursor: "pointer", padding: 0,
+                    transition: "border 0.2s, box-shadow 0.2s",
+                  }}
+                >
+                  <img
+                    src={opt.src} alt={opt.label}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
+                  />
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
+                  {sel && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2 }}
+                      style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
+                    >
+                      <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
+                        <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </motion.div>
+                  )}
+                  <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
+                    {opt.label}
+                  </p>
+                </motion.button>
+              </div>
             );
           })}
         </div>

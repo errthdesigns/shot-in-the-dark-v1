@@ -7,7 +7,7 @@ import { VideoScreen } from "./VideoScreen";
 import { NameScreen } from "./NameScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
-import { RecipeCard } from "./RecipeCard";
+import videoCocktail from "../../assets/Untitled (71).mp4";
 import { CartScreen, calcCartTotal } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
 import { BottleSelector } from "./BottleSelector";
@@ -119,20 +119,11 @@ const STEPS: Step[] = [
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — flavor suggestion: AI reveals the Paloma ingredients as a collage
-  { aiText: "These are the flavours I would suggest. Happy?", aiY: 60, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
-  // 9 — recipe card: after flavor pick, bartender goes straight to work
-
-  { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
-  // 12 — invite preview: waits for mic tap before revealing invite
-  { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 13 — invite view: "Like it?"
-  { aiText: "Like it?", aiY: 85, userText: "Yeah, looks great. Lets send them!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "invite" },
-  // 14 — email
-  { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
-  // 15 — shopping cart (mic tap from recipe card advances here)
+  // 8 — cocktail video (Untitled 71); advances automatically when video ends
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
+  // 9 — shopping cart
   { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 16 — apple pay sheet (triggered by "Continue with Apple Pay" button)
+  // 10 — apple pay sheet (triggered by "Continue with Apple Pay" button)
   { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
 
@@ -283,22 +274,32 @@ function EmailInputField({ index, value, onChange }: { index: number; value: str
   );
 }
 
-// ─── Cocktail card ────────────────────────────────────────────────────────────
-function CocktailCard() {
+// ─── Cocktail video card ──────────────────────────────────────────────────────
+function CocktailCard({ onComplete }: { onComplete: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const skip = () => { videoRef.current?.pause(); onComplete(); };
   return (
     <motion.div
       key="cocktail-card"
-      initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-      transition={{ duration: 0.65, ease: "easeOut" }}
-      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+      style={{ position: "absolute", inset: 0, backgroundColor: "#000", borderRadius: 21, overflow: "hidden" }}
     >
-      <img src={imgDrinkI} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(10,5,0,0.6) 0%, rgba(10,5,0,0.1) 30%, rgba(10,5,0,0.75) 65%, rgba(10,5,0,0.97) 100%)" }} />
-      <p style={{ position: "absolute", left: "50%", top: 518, transform: "translate(-50%, -50%)", fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic", fontSize: 48, color: "white", letterSpacing: -1.5, lineHeight: 1, margin: 0, whiteSpace: "nowrap", textShadow: "0 2px 28px rgba(0,0,0,0.8)" }}>The Vendetta</p>
-      <p style={{ position: "absolute", left: "50%", top: 562, transform: "translateX(-50%)", fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 10.5, color: "rgba(212,168,83,0.9)", letterSpacing: 2.4, textTransform: "uppercase", margin: 0, whiteSpace: "nowrap" }}>Blood Orange · Dark Rum · Amaro · Cardamom</p>
-      <div style={{ position: "absolute", left: "50%", top: 608, transform: "translateX(-50%)", width: 196, height: 40, border: "1px solid rgba(245,240,230,0.45)", borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 11, color: "#F5F0E6", letterSpacing: 2.2, margin: 0 }}>VIEW RECIPE</p>
-      </div>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        controlsList="nodownload"
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", maxWidth: "none" }}
+        src={videoCocktail}
+        onEnded={onComplete}
+      />
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 15%, transparent 78%, rgba(0,0,0,0.55) 100%)" }} />
+      <div onClick={skip} style={{ position: "absolute", inset: 0, cursor: "pointer", zIndex: 10 }} />
+      <motion.p
+        initial={{ opacity: 0 }} animate={{ opacity: 0.35 }} transition={{ delay: 2, duration: 1.2 }}
+        style={{ position: "absolute", bottom: 22, left: "50%", transform: "translateX(-50%)", fontFamily: "Inter, sans-serif", fontSize: 9, color: "white", letterSpacing: 2.8, margin: 0, textTransform: "uppercase", pointerEvents: "none", zIndex: 20 }}
+      >Tap to skip</motion.p>
     </motion.div>
   );
 }
@@ -687,7 +688,7 @@ export function PartyPlannerScreen() {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const handleFlavorConfirm = () => {
+  const handleCocktailComplete = () => {
     setStep(s => Math.min(s + 1, STEPS.length - 1));
   };
 
@@ -706,9 +707,9 @@ export function PartyPlannerScreen() {
   const isThinking  = phase === "thinking";
   const isReady     = phase === "ready";
   const isRecording = phase === "recording" || phase === "transcribing";
-  const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "flavor-pick";
+  const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
   const isBottleSelect  = current.view === "bottle-select";
-  const showUserBox = !isPaymentView && !isBottleSelect && isRecording && current.view !== "invite";
+  const showUserBox = !isPaymentView && !isBottleSelect && isRecording;
 
   return (
     <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
@@ -765,19 +766,6 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Recipe card ──────────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {current.view === "recipe" && (
-          <motion.div key="recipe"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0 }}
-          >
-            <RecipeCard />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ── Cart screen ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "cart" && (
@@ -796,13 +784,6 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Flavor suggestion (Paloma ingredient collage) ──────────────────────── */}
-      <AnimatePresence>
-        {current.view === "flavor-pick" && (
-          <FlavorSuggest onConfirm={handleFlavorConfirm} />
-        )}
-      </AnimatePresence>
-
       {/* ── Bottle selector ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {isBottleSelect && (
@@ -817,214 +798,9 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Invite card + Email form — single AnimatePresence mode="wait" so invite
-           exits completely before email enters (eliminates the stacked-layer glitch) ── */}
-      <AnimatePresence mode="wait">
-        {current.view === "invite" && (
-          <motion.div
-            key="invite"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.18 } }}
-            transition={{ duration: 0.55 }}
-            style={{ position: "absolute", inset: 0 }}
-          >
-            {/* ── Card image — Figma: left-[-110] top-[138] w-[619] h-[520]
-                 maskMode:"alpha" is critical — without it SVG luminance leaks outside the shape ── */}
-            <div style={{
-              position: "absolute", left: -110, top: 138, width: 619, height: 520,
-              maskImage: `url('${img29}')`, WebkitMaskImage: `url('${img29}')`,
-              maskMode: "alpha", WebkitMaskMode: "alpha",
-              maskSize: "318px 521px", WebkitMaskSize: "318px 521px",
-              maskPosition: "152px 0px", WebkitMaskPosition: "152px 0px",
-              maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat",
-              overflow: "hidden", borderRadius: 15.919, pointerEvents: "none",
-            }}>
-              {/* img30 background rotated 90° */}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-                <div style={{ transform: "rotate(90deg)", flexShrink: 0 }}>
-                  <img src={img30} alt="" style={{ width: 520, height: 619, objectFit: "cover", maxWidth: "none", display: "block" }} />
-                </div>
-              </div>
-              {/* imgSafdgdbnf orange horse rider at opacity 0.7 */}
-              <img src={imgSafdgdbnf} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: 0.7 }} />
-              {/* gradient for text legibility */}
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.32) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.42) 68%, rgba(0,0,0,0.84) 100%)" }} />
-            </div>
-
-            {/* ════ CLOSED STATE ════════════════════════════════════════════════════ */}
-
-            {/* Title — Figma Frame 4: left-[201] top-[280] -translate-x-1/2 w-[284.433]
-                 left edge = 201 - 142.22 = 58.78 ≈ 59px */}
-            <motion.p
-              animate={{ opacity: inviteOpen ? 0 : 1 }}
-              transition={{ duration: 0.3 }}
-              style={{ position: "absolute", left: 59, top: 280, width: 284, fontFamily: "Spectral, serif", fontWeight: 500, fontStyle: "italic", fontSize: 16.786, textAlign: "center", color: "white", letterSpacing: 3.3572, lineHeight: 1.35, margin: 0, pointerEvents: "none" }}
-            >
-              <span style={{ textTransform: "capitalize" }}>Exclusive</span>
-              {" invitation FOR "}
-              <span style={{ textTransform: "capitalize" }}>John Doe</span>
-            </motion.p>
-
-            {/* Description — Figma Frame 4: left-[201] top-[348] h-[51] w-[240]
-                 left edge = 201 - 120 = 81px */}
-            <motion.p
-              animate={{ opacity: inviteOpen ? 0 : 1 }}
-              transition={{ duration: 0.3 }}
-              style={{ position: "absolute", left: 81, top: 348, width: 240, height: 51, fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 14.133, textAlign: "center", color: "white", lineHeight: 1.25, margin: 0, overflow: "hidden", pointerEvents: "none" }}
-            >
-              You're invited to an exclusive invitation-only murder mystery event called Shot In The Dark.
-            </motion.p>
-
-            {/* Scroll indicator — Figma Frame 4: left-[185] top-[436] w-[32.085] h-[81.764]
-                 vertical pill (rotate -90°) with down-arrow inside */}
-            <motion.div
-              animate={{ opacity: inviteOpen ? 0 : 1 }}
-              transition={{ duration: 0.3 }}
-              style={{ position: "absolute", left: 185, top: 436, width: 32, height: 82, pointerEvents: "none" }}
-            >
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: 82, height: 32, transform: "rotate(-90deg)", border: "0.776px solid white", borderRadius: 65, flexShrink: 0 }} />
-              </div>
-              <svg style={{ position: "absolute", left: "50%", top: "16%", transform: "translateX(-50%)" }} width="14" height="22" viewBox="0 0 14 22" fill="none">
-                <line x1="7" y1="2" x2="7" y2="14" stroke="white" strokeWidth="0.9" strokeLinecap="round" />
-                <path d="M2 11 L7 16 L12 11" stroke="white" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </motion.div>
-
-            {/* ── OPENED: title — Figma: left-[201.22px] -translate-x-1/2 w-[284] top-[226] → left=59 ── */}
-            <motion.div
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.4 }}
-              style={{ position: "absolute", left: 59, top: 226, width: 284, pointerEvents: "none" }}
-            >
-              <p style={{ fontFamily: "Spectral, serif", fontWeight: 500, fontStyle: "italic", fontSize: 16.786, textAlign: "center", color: "white", letterSpacing: 3.3572, lineHeight: 1.35, margin: 0, textTransform: "capitalize" }}>1920's Great Gatsby</p>
-              <p style={{ fontFamily: "Spectral, serif", fontWeight: 500, fontStyle: "italic", fontSize: 16.786, textAlign: "center", color: "white", letterSpacing: 3.3572, lineHeight: 1.35, margin: 0, textTransform: "capitalize" }}>Murder Mystery</p>
-            </motion.div>
-            {/* ── OPENED: date — Figma Frame 11: left-[201] top-[277] -translate-x-1/2 w-[240]
-                 single line "26th Feb 2026 @ 7pm" — left edge = 81px */}
-            <motion.div
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.4, delay: 0.08 }}
-              style={{ position: "absolute", left: 81, top: 277, width: 240, textAlign: "center", pointerEvents: "none" }}
-            >
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 8, color: "white", lineHeight: 1.5, margin: 0 }}>26th Feb 2026 @ 7pm</p>
-            </motion.div>
-
-            {/* ── OPENED: location pill — Figma Frame 11: left-[135] top-[306] w-[132] h-[27]
-                 bg rgba(0,0,0,0.5), border 0.614px solid white, borderRadius 57.682px */}
-            <motion.div
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.4, delay: 0.14 }}
-              style={{ position: "absolute", left: 135, top: 306, width: 132, height: 27, backgroundColor: "rgba(0,0,0,0.5)", border: "0.614px solid white", borderRadius: 57.682, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, pointerEvents: "none" }}
-            >
-              <svg width="8" height="12" viewBox="0 0 8 12" fill="none" style={{ flexShrink: 0 }}>
-                <path d="M4 0C1.791 0 0 1.791 0 4C0 7 4 12 4 12C4 12 8 7 8 4C8 1.791 6.209 0 4 0ZM4 5.5C3.172 5.5 2.5 4.828 2.5 4C2.5 3.172 3.172 2.5 4 2.5C4.828 2.5 5.5 3.172 5.5 4C5.5 4.828 4.828 5.5 4 5.5Z" fill="white" />
-              </svg>
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 8, color: "white", lineHeight: 1.495, margin: 0, whiteSpace: "nowrap" }}>Birch Hotel, London</p>
-            </motion.div>
-
-            {/* ── OPENED: body copy — Figma Frame 11: left-[197] top-[363] -translate-x-1/2 w-[252] h-[140]
-                 left edge = 197 - 126 = 71px — Inter Regular 12px white text-center */}
-            <motion.div
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ position: "absolute", left: 71, top: 363, width: 252, height: 140, pointerEvents: "none" }}
-            >
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.25, margin: 0 }}>
-                You're in for a night of secrets, suspicion, and Don Julio. Someone at your table has blood on their hands.
-              </p>
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.25, margin: "10px 0 0" }}>
-                Your AI host knows who; but they're not telling. Not yet.
-              </p>
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 12, color: "white", textAlign: "center", lineHeight: 1.25, margin: "10px 0 0" }}>
-                Dress sharp. Trust no one. And whatever you do, don't leave your drink unattended.
-              </p>
-            </motion.div>
-
-            {/* ── OPEN INVITATION button — Figma: left-[75] top-[556] w-[252] h-[41] ── */}
-            <motion.button
-              animate={{ opacity: inviteOpen ? 0 : 1 }}
-              transition={{ duration: 0.25 }}
-              onClick={() => setInviteOpen(true)}
-              style={{ position: "absolute", left: 75, top: 556, width: 252, height: 41, backgroundColor: "white", borderRadius: 20, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: inviteOpen ? "none" : "auto" }}
-              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
-            >
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12, color: "#313131", letterSpacing: 1.8, margin: 0 }}>OPEN INVITATION</p>
-            </motion.button>
-
-            {/* ── I WILL BE ATTENDING — Figma: left-[75] top-[530] w-[252] h-[41] ── */}
-            <motion.button
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => {}}
-              style={{ position: "absolute", left: 75, top: 530, width: 252, height: 41, backgroundColor: "white", borderRadius: 20, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: inviteOpen ? "auto" : "none" }}
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}
-            >
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12, color: "#313131", letterSpacing: 1.8, margin: 0 }}>I WILL BE ATTENDING</p>
-            </motion.button>
-
-            {/* ── I HAVE TO DECLINE — Figma: left-[75] top-[581] w-[252] h-[41] ── */}
-            <motion.button
-              animate={{ opacity: inviteOpen ? 1 : 0 }}
-              transition={{ duration: 0.45, delay: 0.07, ease: [0.16, 1, 0.3, 1] }}
-              onClick={() => {}}
-              style={{ position: "absolute", left: 75, top: 581, width: 252, height: 41, backgroundColor: "#313131", borderRadius: 20, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: inviteOpen ? "auto" : "none" }}
-              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }}
-            >
-              <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 12, color: "white", letterSpacing: 1.8, margin: 0 }}>I HAVE TO DECLINE</p>
-            </motion.button>
-
-            {/* ── User message bubble — Figma Frame 7: left-[20] top-[688] w-[352]
-                 bg rgba(255,255,255,0.1), border 1px solid #838383, rounded-[10px], p-[16px] ── */}
-            <motion.div
-              animate={{ opacity: isRecording ? 1 : 0 }}
-              transition={{ duration: 0.28, ease: "easeOut" }}
-              style={{ position: "absolute", left: 20, top: 688, width: 352, backgroundColor: "rgba(255,255,255,0.07)", border: `1px solid ${phase === "recording" ? "#8B2E2E" : "#838383"}`, borderRadius: 10, padding: "14px 18px", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 10, pointerEvents: "none", transition: "border-color 0.3s" }}
-            >
-              {phase === "recording" ? (
-                <Waveform />
-              ) : (
-                <>
-                  {isUserTyping && (
-                    <div style={{ flexShrink: 0, width: 6, height: 6, borderRadius: "50%", backgroundColor: "#e5311c", animation: "voicePulse 0.65s ease-in-out infinite" }} />
-                  )}
-                  <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", lineHeight: 1.5, margin: 0, textAlign: "center", flex: 1 }}>
-                    <UserText text={userDisplay} />{isUserTyping && <Cursor />}
-                  </p>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-
-        {/* ── Email form (inside same AnimatePresence — enters only after invite exits) ── */}
-        {current.view === "email" && (
-          <motion.div key="email" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} style={{ position: "absolute", left: 33, top: 306, width: 335 }}>
-            <EmailField value="john.doe@gmail.com"        filled index={0} />
-            <EmailField value="sarah.black@gmail.com"     filled index={1} />
-            <EmailField value="james.white@icloud.com"    filled index={2} />
-            <EmailField value="olivia.grey@outlook.com"   filled index={3} />
-            <EmailField value="thomas.scarlett@gmail.com" filled index={4} />
-            <EmailInputField index={5} value={lastEmail} onChange={setLastEmail} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Continue button */}
+      {/* ── Cocktail video ───────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {current.view === "email" && (
-          <motion.div key="continue" initial={{ opacity: 0 }} animate={{ opacity: lastEmail ? 1 : 0.2 }} exit={{ opacity: 0 }}
-            onClick={handleContinue}
-            style={{ position: "absolute", left: "50%", bottom: 135, transform: "translateX(-50%)", width: 335, height: 50, backgroundColor: "white", borderRadius: 62, display: "flex", alignItems: "center", justifyContent: "center", cursor: lastEmail ? "pointer" : "default" }}
-          >
-            <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "black", lineHeight: 1.5, margin: 0 }}>Continue</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Cocktail card ────────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {current.view === "cocktail" && <CocktailCard />}
+        {current.view === "cocktail" && <CocktailCard key="cocktail" onComplete={handleCocktailComplete} />}
       </AnimatePresence>
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}

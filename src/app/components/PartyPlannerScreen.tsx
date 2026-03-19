@@ -338,89 +338,40 @@ const FLAVOR_VOID_POSITIONS = [
   { x:  130, y:  205, rotZ:  6.3, w: 148, h: 160 },
 ];
 
-// ── Flavor suggest — Figma collage layout: Paloma ingredients with label tabs ──
-const SUGGEST_ITEMS = [
-  // Left column
-  { src: imgPalomaGrapefruit, label: "Grapefruit", color: "#E5311C", top: 148, left: 12,  w: 218, h: 255, col: "left"   as const, imgStyle: {} },
-  { src: imgDrinkE,           label: "Agave Nectar",color: "#C8820A", top: 418, left: 12,  w: 218, h: 155, col: "bottom" as const, imgStyle: {} },
-  { src: imgDrinkC,           label: "Club Soda",   color: "#E06020", top: 584, left: 12,  w: 218, h: 132, col: "left"   as const, imgStyle: {} },
-  // Right column
-  { src: imgPalomaLime,       label: "Lime",        color: "#4AB856", top: 200, left: 242, w: 146, h: 198, col: "right"  as const, imgStyle: { objectPosition: "center 60%" } },
-  { src: imgDrinkB,           label: "Cilantro",    color: "#27AE60", top: 410, left: 242, w: 146, h: 155, col: "right"  as const, imgStyle: {} },
+// ── Paloma ingredient void positions (TileSlot x/y = offset from AutoGallery centre 201/420) ──
+const PALOMA_VOID_POSITIONS = [
+  { x:  -90, y: -175, rotZ: -5.5, w: 178, h: 160 },   // grapefruit
+  { x:  140, y: -135, rotZ:  4.2, w: 152, h: 172 },   // lime
+  { x: -158, y:   18, rotZ: -7.0, w: 158, h: 142 },   // agave nectar
+  { x:  122, y:   75, rotZ:  5.8, w: 148, h: 158 },   // cilantro
+  { x:  -52, y:  190, rotZ: -3.8, w: 182, h: 150 },   // club soda
+];
+
+const PALOMA_ITEMS = [
+  { src: imgPalomaGrapefruit, label: "Grapefruit",   tagColor: "#E5311C" },
+  { src: imgPalomaLime,       label: "Lime",          tagColor: "#4AB856" },
+  { src: imgDrinkE,           label: "Agave Nectar",  tagColor: "#C8820A" },
+  { src: imgDrinkB,           label: "Cilantro",      tagColor: "#27AE60" },
+  { src: imgDrinkC,           label: "Club Soda",     tagColor: "#E06020" },
 ] as const;
 
-const TAB_W = 34;
-
-function SuggestTile({ src, label, color, top, left, w, h, col, imgStyle }: {
-  src: string; label: string; color: string;
-  top: number; left: number; w: number; h: number;
-  col: "left" | "right" | "bottom";
-  imgStyle: React.CSSProperties;
-}) {
-  return (
-    <motion.div
-      style={{ position: "absolute", top, left, width: w, height: h, overflow: "visible" }}
-      initial={{ opacity: 0, scale: 0.94, y: 12 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {/* Image */}
-      <div style={{ width: w, height: h, borderRadius: 14, overflow: "hidden", position: "relative" }}>
-        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...imgStyle }} />
-        {/* Bottom label (Agave Nectar) */}
-        {col === "bottom" && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 14px 12px", background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}>
-            <p style={{ fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic", fontSize: 17, color: "white", margin: 0 }}>{label}</p>
-          </div>
-        )}
-      </div>
-      {/* Right-extending label tab — left column extends into gap, right column is flush inside */}
-      {col !== "bottom" && (
-        <div style={{
-          position: "absolute",
-          top: Math.round(h * 0.3),
-          right: col === "left" ? -(TAB_W) : 0,
-          width: TAB_W,
-          height: Math.min(100, Math.round(h * 0.42)),
-          backgroundColor: color,
-          borderRadius: col === "left" ? "0 5px 5px 0" : "0 14px 14px 0",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          overflow: "hidden",
-          zIndex: 2,
-        }}>
-          <span style={{
-            transform: "rotate(90deg)", display: "block",
-            fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-            fontSize: 13, color: "white", whiteSpace: "nowrap", letterSpacing: 0.2,
-          }}>{label}</span>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
+// ── Flavor suggest — just the "Happy?" button overlay; tiles live in AutoGallery tileSlots ──
 function FlavorSuggest({ onConfirm }: { onConfirm: () => void }) {
   return (
     <motion.div
       key="flavor-suggest"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.55 }}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
-      {SUGGEST_ITEMS.map((item, i) => (
-        <SuggestTile key={item.label} {...item} />
-      ))}
-
-      {/* Confirm button — same position as old "Build it →" */}
       <motion.button
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.8 }}
+        initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+        transition={{ duration: 0.35, delay: 0.6 }}
         onClick={onConfirm}
         style={{
           position: "absolute", bottom: 36, left: 28, right: 28,
           height: 52, borderRadius: 26, backgroundColor: "white",
-          border: "none", cursor: "pointer",
+          border: "none", cursor: "pointer", pointerEvents: "auto",
           fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 18,
           color: "black", letterSpacing: -0.3,
         }}
@@ -502,13 +453,15 @@ export function PartyPlannerScreen() {
 
   const current     = STEPS[step];
   const isEmailStep = current.view === "email";
-  // Show AutoGallery for photo steps AND cocktail/keyword void steps (tiles only, no photos)
+  // Show AutoGallery for photo steps AND void steps (keyword, flavor-pick — tiles only, no photos)
   const showGallery =
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
-    current.imgState === "keyword-reveal";
+    current.imgState === "keyword-reveal" ||
+    current.view === "flavor-pick";
 
   const currentGalleryImages =
+    current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
@@ -561,6 +514,38 @@ export function PartyPlannerScreen() {
         ),
       });
     }
+  }
+
+  // ── Paloma ingredient TileSlots — float through the 3D void ──────────────────
+  if (current.view === "flavor-pick") {
+    PALOMA_ITEMS.forEach((item, i) => {
+      const pos = PALOMA_VOID_POSITIONS[i];
+      tileSlots.push({
+        id: `paloma-${item.label}`,
+        x: pos.x, y: pos.y, rotZ: pos.rotZ,
+        w: pos.w, h: pos.h, radius: 12,
+        children: (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            {/* Gradient scrim for label legibility */}
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%)" }} />
+            {/* Colored label tag — stays inside tile boundary so void rotation works */}
+            <div style={{
+              position: "absolute", top: 0, right: 0, bottom: 0, width: 30,
+              backgroundColor: item.tagColor,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              overflow: "hidden",
+            }}>
+              <span style={{
+                transform: "rotate(90deg)", display: "block", whiteSpace: "nowrap",
+                fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
+                fontSize: 12, color: "white", letterSpacing: 0.3,
+              }}>{item.label}</span>
+            </div>
+          </div>
+        ),
+      });
+    });
   }
 
   if (current.imgState === "gatsby-reveal") {
@@ -744,7 +729,7 @@ export function PartyPlannerScreen() {
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
-        {!showGallery && (current.view === "chat" || current.view === "flavor-pick") && (
+        {!showGallery && current.view === "chat" && (
           <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
             style={{ position: "absolute", inset: 0 }}
           >

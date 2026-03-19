@@ -87,10 +87,31 @@ const INGREDIENT_DEFS: IngredientDef[] = [
   { keyword: "raspberry",  src: imgDrinkA,               x:  51, y: 295, w: 127, h: 161, radius: 20,     rotZ: -6.5, cx: -150, cy:  -70  },
 ];
 
+// ── Flavor picker options ─────────────────────────────────────────────────────
+const FLAVOR_PICK_STEP  = 8;
+const FLAVOR_BUILD_STEP = 9;
+interface FlavorOption { id: string; label: string; src: string; }
+const FLAVOR_OPTIONS: FlavorOption[] = [
+  { id: "citrus",  label: "Citrus",        src: imgDrinkB },
+  { id: "berries", label: "Berries",       src: imgDrinkA },
+  { id: "fruit",   label: "Stone Fruit",   src: imgIngredientStrawberry },
+  { id: "spice",   label: "Spice",         src: imgDrinkH },
+  { id: "dark",    label: "Dark & Bitter", src: imgDrinkE },
+  { id: "smoke",   label: "Smoke",         src: imgDrinkC },
+];
+const FLAVOR_LINES: Record<string, string> = {
+  citrus:  "Citrus. Sharp. Clean. A good spine.",
+  berries: "Berries. Dark underneath. Good instinct.",
+  fruit:   "Stone fruit. Soft on top, something underneath.",
+  spice:   "Spice. Heat at the back of the throat.",
+  dark:    "Dark and bitter. Bold call.",
+  smoke:   "Smoke. The most dangerous pick on the board.",
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
 type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build";
-type ViewState = "chat" | "bottle-select" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
+type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -114,16 +135,16 @@ const STEPS: Step[] = [
   { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
   // 4 — tone intro, waits for voice to finish before advancing to bottle prompt
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 5 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
-  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 5 — auto-advances after voice (no mic tap needed)
+  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 6 — bottle selector: AI speaks while user chooses; tapping a bottle advances
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 7 — dynamic bottle selection response (text set via getAiText); then ask flavour
-  { aiText: "", aiY: 85, userText: "something fruity, maybe orange?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 8 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
-  { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 9 — still building; "depth"/"spice" keywords trigger more ingredient tiles
-  { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 8 — flavor picker: user taps ingredient image tiles (built-in confirm button)
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
+  // 9 — cocktail build reveal: dynamic text from flavor picks, speechAdvance, void with tiles
+  { aiText: "", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 10 — recipe card with sequential ingredient spawn
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
   // 12 — invite preview: waits for mic tap before revealing invite
@@ -142,14 +163,18 @@ const STEPS: Step[] = [
 const BOTTLE_RESPONSE_STEP = 7;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
-  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
-  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.\n\nNow — what are you working with flavour-wise?",
-  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.\n\nNow — what are you working with flavour-wise?",
+  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.",
+  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.",
+  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.",
 };
 
-function resolveAiText(stepIdx: number, bottle: string | null): string {
+function resolveAiText(stepIdx: number, bottle: string | null, flavors: string[]): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
-return STEPS[stepIdx].aiText;
+  if (stepIdx === FLAVOR_BUILD_STEP) {
+    const lines = flavors.filter(f => FLAVOR_LINES[f]).map(f => FLAVOR_LINES[f]).join("\n");
+    return `${lines || "Interesting choices."}\n\nThe Velvet Alibi.\nI knew it before you finished.`;
+  }
+  return STEPS[stepIdx].aiText;
 }
 
 const WAVE_H = [7, 14, 20, 11, 22, 9, 17, 13, 21, 8, 16, 12];
@@ -333,6 +358,73 @@ function DateTileContent() {
   );
 }
 
+// ── Flavor picker ─────────────────────────────────────────────────────────────
+function FlavorPicker({ options, selected, onToggle, onConfirm }: {
+  options: FlavorOption[];
+  selected: string[];
+  onToggle: (id: string) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <motion.div
+      key="flavor-picker"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.45 }}
+      style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", padding: "90px 20px 100px" }}
+    >
+      <p style={{ fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 22, color: "white", textAlign: "center", margin: "0 0 18px", lineHeight: 1.25, letterSpacing: -0.3 }}>
+        What calls to you?
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flex: 1 }}>
+        {options.map(opt => {
+          const sel = selected.includes(opt.id);
+          return (
+            <motion.button
+              key={opt.id}
+              onClick={() => onToggle(opt.id)}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                position: "relative", borderRadius: 14, overflow: "hidden",
+                border: sel ? "2.5px solid white" : "2px solid rgba(255,255,255,0.12)",
+                background: "none", cursor: "pointer", padding: 0,
+              }}
+            >
+              <img src={opt.src} alt={opt.label} style={{ width: "100%", height: 120, objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 35%, rgba(0,0,0,0.72) 100%)" }} />
+              {sel && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ position: "absolute", top: 8, right: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <svg width="10" height="8" fill="none" viewBox="0 0 10 8">
+                    <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </motion.div>
+              )}
+              <p style={{ position: "absolute", bottom: 8, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 13, color: "white", margin: 0, letterSpacing: 0.4, fontStyle: "italic" }}>
+                {opt.label}
+              </p>
+            </motion.button>
+          );
+        })}
+      </div>
+      <AnimatePresence>
+        {selected.length > 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+            onClick={onConfirm}
+            style={{ marginTop: 14, width: "100%", height: 52, borderRadius: 26, backgroundColor: "white", border: "none", cursor: "pointer", fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 18, color: "black", letterSpacing: -0.3 }}
+          >
+            Build it →
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export function PartyPlannerScreen() {
   const [step, setStep]                 = useState(0);
@@ -359,6 +451,7 @@ export function PartyPlannerScreen() {
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
   const [selectedBottle, setSelectedBottle] = useState<string | null>(null);
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -507,7 +600,7 @@ export function PartyPlannerScreen() {
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
-    const text  = resolveAiText(step, selectedBottle);
+    const text  = resolveAiText(step, selectedBottle, selectedFlavors);
     const s     = STEPS[step];
     const myStep = step;
     let i = 0;
@@ -637,6 +730,11 @@ export function PartyPlannerScreen() {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
+  const handleFlavorConfirm = () => {
+    setBuildKeywords(new Set(COCKTAIL_BUILD_ITEMS.map(i => i.id)));
+    setStep(s => Math.min(s + 1, STEPS.length - 1));
+  };
+
   const handleContinue = () => {
     if (current.view !== "email" || !lastEmail) return;
     const emailStep = step; // capture so double-tap can't advance past cart
@@ -652,7 +750,7 @@ export function PartyPlannerScreen() {
   const isThinking  = phase === "thinking";
   const isReady     = phase === "ready";
   const isRecording = phase === "recording" || phase === "transcribing";
-  const isPaymentView   = current.view === "cart" || current.view === "apple-pay";
+  const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "flavor-pick";
   const isBottleSelect  = current.view === "bottle-select";
   const showUserBox = !isPaymentView && !isBottleSelect && isRecording && current.view !== "invite";
 
@@ -735,6 +833,18 @@ export function PartyPlannerScreen() {
       <AnimatePresence>
         {current.view === "apple-pay" && (
           <ApplePaySheet key="apple-pay" total={(partyDetails?.budgetPerHead ?? 60) * (partyDetails?.guests ?? 6)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Flavor picker ───────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {current.view === "flavor-pick" && (
+          <FlavorPicker
+            options={FLAVOR_OPTIONS}
+            selected={selectedFlavors}
+            onToggle={id => setSelectedFlavors(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
+            onConfirm={handleFlavorConfirm}
+          />
         )}
       </AnimatePresence>
 

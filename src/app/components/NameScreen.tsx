@@ -131,8 +131,8 @@ export function NameScreen({ onComplete }: Props) {
 
       {/* AI question text */}
       <div style={{
-        position: "absolute", left: "50%", top: 200,
-        transform: "translateX(-50%)",
+        position: "absolute", left: "50%", top: "50%",
+        transform: "translate(-50%, -50%)",
         width: 310, textAlign: "center", zIndex: 5,
       }}>
         <AnimatePresence mode="wait">

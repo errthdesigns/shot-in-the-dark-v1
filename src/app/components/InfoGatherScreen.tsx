@@ -596,11 +596,11 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
           </motion.p>
 
           {/* Content area */}
-          <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
 
             {/* ── GUESTS ── */}
             {panel === "guests" && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: GAP }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: GAP, justifyContent: "center" }}>
                 {GUEST_OPTIONS.map((n, i) => {
                   const sel = guests === n;
                   return (
@@ -638,7 +638,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+                style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <PegmanHolder onDragToMap={handleDrop} dropped={dropPos !== null} />
@@ -665,7 +665,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20, alignItems: "center" }}>
                 {/* Date strip — large horizontal-scroll cards */}
                 <div
                   ref={scrollRef}
@@ -783,7 +783,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                   </p>
                 </div>
 
-                <div style={{ width: "100%", marginBottom: 24 }}>
+                <div style={{ width: "100%", marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <input
                     type="range" min={20} max={200} step={10}
                     value={budget}

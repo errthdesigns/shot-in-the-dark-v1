@@ -596,7 +596,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
           </motion.p>
 
           {/* Content area */}
-          <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
             {/* ── GUESTS ── */}
             {panel === "guests" && (
@@ -665,7 +665,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20, alignItems: "center" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
                 {/* Date strip — large horizontal-scroll cards */}
                 <div
                   ref={scrollRef}
@@ -714,7 +714,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
                 {/* Time tiles — 2-column grid */}
                 <div style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%",
                 }}>
                   {TIME_OPTIONS.map((t, i) => {
                     const sel = time === t;

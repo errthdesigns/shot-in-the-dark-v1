@@ -1,15 +1,26 @@
 import React from "react";
 import { motion } from "motion/react";
-import imgTequila from "figma:asset/c53c7a45987dfc7eb6c4e7a8d3d99e4b06d4258b.png";
-import imgLime from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
-import imgGrapefruit from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
-import imgAgave from "figma:asset/fdbf08631a64c7759f8f34e345f24dd602054d7d.png";
-import imgCilantro from "figma:asset/bebb630f58426b309f126863bf068e9875b1c0c6.png";
+import imgTequila from "../../assets/Reposado.png";
+import imgLime from "../../assets/Lime.png";
+import imgGrapefruit from "../../assets/Grapefruit.png";
+import imgAgave from "../../assets/Agave.png";
+import imgCilantro from "../../assets/Cilantro.png";
 
 interface CartScreenProps {
   onApplePay: () => void;
-  budgetPerHead?: number;
   guests?: number;
+}
+
+// Per-unit prices
+const P_TEQUILA    = 54.99; // 1 bottle per event
+const P_GRAPEFRUIT =  1.99; // per guest
+const P_LIME       =  0.99; // per guest
+const P_AGAVE      =  4.99; // 1 bottle per event
+const P_CILANTRO   =  1.99; // 1 bunch per event
+
+/** Exported so PartyPlannerScreen can pass the same number to ApplePaySheet */
+export function calcCartTotal(guests: number): number {
+  return P_TEQUILA + guests * P_GRAPEFRUIT + guests * P_LIME + P_AGAVE + P_CILANTRO;
 }
 
 const ITEM_LABEL: React.CSSProperties = {
@@ -33,12 +44,16 @@ const PRICE_LABEL: React.CSSProperties = {
   flexShrink: 0,
 };
 
-/** One row with an emoji icon */
-function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price: string }) {
+function ImgRow({ src, imgStyle, label, price }: {
+  src: string;
+  imgStyle?: React.CSSProperties;
+  label: string;
+  price: string;
+}) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
-      <div style={{ flexShrink: 0, width: 58, height: 58, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 38 }}>
-        {emoji}
+      <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <img alt="" src={src} style={{ width: 58, height: 58, objectFit: "cover", display: "block", ...imgStyle }} />
       </div>
       <p style={ITEM_LABEL}>{label}</p>
       <p style={PRICE_LABEL}>{price}</p>
@@ -46,11 +61,11 @@ function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price
   );
 }
 
-// Reposado Paloma: tequila + grapefruit + lime + agave nectar + cilantro
-const CART_ITEM_TOTAL = 54.99 + 1.99 + 0.99 + 4.99 + 1.99;
+export function CartScreen({ onApplePay, guests = 6 }: CartScreenProps) {
+  const gfQty   = guests;
+  const limeQty = guests;
+  const total   = calcCartTotal(guests).toFixed(2);
 
-export function CartScreen({ onApplePay }: CartScreenProps) {
-  const total = CART_ITEM_TOTAL.toFixed(2);
   return (
     <motion.div
       key="cart-sheet"
@@ -74,92 +89,62 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
     >
       {/* ── Fixed header ── */}
       <div style={{ flexShrink: 0, padding: "0 24px" }}>
-        {/* Drag handle */}
         <div style={{ display: "flex", justifyContent: "center", paddingTop: 11, paddingBottom: 6 }}>
           <svg width="64" height="4" fill="none" viewBox="0 0 64 4">
             <path d="M2 2H62" stroke="#DEDFDC" strokeLinecap="round" strokeWidth="4" />
           </svg>
         </div>
-
-        {/* URL bar */}
         <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 16, color: "#000", lineHeight: 1.1, margin: "0 0 10px", textAlign: "center", whiteSpace: "nowrap" }}>
           xxx.com/cart
         </p>
-
-        {/* Your Cart */}
         <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 22, color: "#0d0d0d", lineHeight: "32px", margin: "0 0 8px" }}>
           Your Cart
         </p>
       </div>
 
-      {/* ── Scrollable items area ── */}
+      {/* ── Scrollable items ── */}
       <div style={{ flex: 1, overflowY: "auto", padding: "6px 24px 0", WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
-        {/* Tequila bottle — image */}
+
+        {/* Tequila bottle (1×) */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
           <div style={{ flexShrink: 0, width: 58, height: 80, overflow: "hidden" }}>
-            <img
-              alt=""
-              src={imgTequila}
+            <img alt="" src={imgTequila}
               style={{ position: "relative", height: "113.56%", left: "-16%", maxWidth: "none", top: "-6.1%", width: "134%" }}
             />
           </div>
-          <p style={ITEM_LABEL}>Reposado Tequila</p>
-          <p style={PRICE_LABEL}>$54.99</p>
+          <p style={ITEM_LABEL}>Reposado Tequila <span style={{ fontSize: 13, color: "#aaa", fontStyle: "normal" }}>×1</span></p>
+          <p style={PRICE_LABEL}>${P_TEQUILA.toFixed(2)}</p>
         </div>
 
-        {/* Grapefruit — image */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
-          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img
-              alt=""
-              src={imgGrapefruit}
-              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
-            />
-          </div>
-          <p style={ITEM_LABEL}>Fresh Grapefruit</p>
-          <p style={PRICE_LABEL}>$1.99</p>
-        </div>
+        {/* Fresh Grapefruit (guests×) */}
+        <ImgRow
+          src={imgGrapefruit}
+          label={`Fresh Grapefruit ×${gfQty}`}
+          price={`$${(P_GRAPEFRUIT * gfQty).toFixed(2)}`}
+        />
 
-        {/* Lime — image */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
-          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img
-              alt=""
-              src={imgLime}
-              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
-            />
-          </div>
-          <p style={ITEM_LABEL}>Fresh Lime</p>
-          <p style={PRICE_LABEL}>$0.99</p>
-        </div>
+        {/* Fresh Lime (guests×) */}
+        <ImgRow
+          src={imgLime}
+          label={`Fresh Lime ×${limeQty}`}
+          price={`$${(P_LIME * limeQty).toFixed(2)}`}
+        />
 
-        {/* Agave Nectar — image */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
-          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img
-              alt=""
-              src={imgAgave}
-              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
-            />
-          </div>
-          <p style={ITEM_LABEL}>Agave Nectar</p>
-          <p style={PRICE_LABEL}>$4.99</p>
-        </div>
+        {/* Agave Nectar (1×) */}
+        <ImgRow
+          src={imgAgave}
+          label="Agave Nectar ×1"
+          price={`$${P_AGAVE.toFixed(2)}`}
+        />
 
-        {/* Fresh Cilantro — image */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
-          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img
-              alt=""
-              src={imgCilantro}
-              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
-            />
-          </div>
-          <p style={ITEM_LABEL}>Fresh Cilantro</p>
-          <p style={PRICE_LABEL}>$1.99</p>
-        </div>
+        {/* Fresh Cilantro (1×) */}
+        <ImgRow
+          src={imgCilantro}
+          label="Fresh Cilantro ×1"
+          price={`$${P_CILANTRO.toFixed(2)}`}
+        />
 
-        {/* Alibi — joke item, $0 */}
+        {/* One Alibi — complimentary */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
           <div style={{ flexShrink: 0, width: 58, height: 58, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34 }}>
             🎭
@@ -177,19 +162,13 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
       {/* ── Fixed footer ── */}
       <div style={{ flexShrink: 0, padding: "0 24px 20px" }}>
         <div style={{ height: 1, backgroundColor: "#e5e5e5", marginBottom: 14 }} />
-
-        {/* Total row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>TOTAL</p>
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>${total}</p>
         </div>
-
-        {/* Checkout */}
         <button style={{ width: "100%", height: 44, backgroundColor: "#262626", borderRadius: 5, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
           <span style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 15, color: "white" }}>Checkout</span>
         </button>
-
-        {/* Apple Pay */}
         <button onClick={onApplePay} style={{ width: "100%", height: 44, backgroundColor: "#262626", borderRadius: 5, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <span style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 15, color: "white" }}>Continue with Apple Pay</span>
         </button>

@@ -15,25 +15,23 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { speakText, stopSpeech } from "../services/elevenlabs";
 
-import imgGrapefruit    from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
-import imgLime          from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
-import imgAgave         from "figma:asset/fdbf08631a64c7759f8f34e345f24dd602054d7d.png";
-import imgCilantro      from "figma:asset/bebb630f58426b309f126863bf068e9875b1c0c6.png";
-import imgTequilaBottle from "figma:asset/8bef655fab2288c1abb626e35b6d1aae3918d462.png";
+import imgGrapefruit    from "../../assets/Grapefruit.png";
+import imgLime          from "../../assets/Lime.png";
+import imgAgave         from "../../assets/Agave.png";
+import imgCilantro      from "../../assets/Cilantro.png";
+import imgTequilaBottle from "../../assets/Reposado.png";
 
 const easeOut = [0.16, 1, 0.3, 1] as const;
 const delay   = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ── Reusable ingredient tile ──────────────────────────────────────────────────
 function Tile({
-  visible, src, style, imgStyle, measure, label, radius = 8,
+  visible, src, style, imgStyle, radius = 8,
 }: {
   visible: boolean;
   src: string;
   style: React.CSSProperties;
   imgStyle?: React.CSSProperties;
-  measure: string;
-  label: string;
   radius?: number;
 }) {
   return (
@@ -48,26 +46,6 @@ function Tile({
         alt=""
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...imgStyle }}
       />
-      {/* gradient scrim for label legibility */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%)",
-        pointerEvents: "none",
-      }} />
-      <div style={{ position: "absolute", left: 12, bottom: 11, pointerEvents: "none" }}>
-        <p style={{
-          fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-          fontSize: 13, color: "white", lineHeight: 1.25, margin: 0,
-        }}>
-          {measure}
-        </p>
-        <p style={{
-          fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-          fontSize: 13, color: "white", lineHeight: 1.25, margin: 0,
-        }}>
-          {label}
-        </p>
-      </div>
     </motion.div>
   );
 }
@@ -127,10 +105,12 @@ export function RecipeCard() {
 
   const s = (n: number) => stage >= n;
 
-  // ── Layout  (402 × 874 canvas; ~110px bottom reserved for the mic bar)
-  // Row 1 (top):    grapefruit left  | lime right        — h 220, top 5
-  // Row 2 (middle): bottle full-width                    — h 285, top 230
-  // Row 3 (bottom): agave left       | cilantro right    — h 225, top 520
+  // ── Layout  (402 × 874 canvas — tiles fill the full height, mic bar floats on top)
+  // 3 equal rows × 290px, 2px gap between each → 290+2+290+2+290 = 874px
+  // Portrait images (370×534) anchored to bottom so baked-in text labels are always visible
+  // Row 1 (top):    grapefruit left  | lime right        — h 290, top 0
+  // Row 2 (middle): bottle full-width                    — h 290, top 292
+  // Row 3 (bottom): agave left       | cilantro right    — h 290, top 584
 
   return (
     <div style={{ position: "absolute", inset: 0, backgroundColor: "#0A0A0A", overflow: "hidden" }}>
@@ -139,69 +119,36 @@ export function RecipeCard() {
       <Tile
         visible={s(1)}
         src={imgGrapefruit}
-        style={{ left: 5, top: 5, width: 195, height: 220 }}
-        measure="22ml"
-        label="Fresh Grapefruit"
+        style={{ left: 0, top: 0, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
       <Tile
         visible={s(2)}
         src={imgLime}
-        style={{ left: 205, top: 5, width: 192, height: 220 }}
-        imgStyle={{ objectPosition: "center 60%" }}
-        measure="15ml"
-        label="Fresh Lime"
+        style={{ left: 202, top: 0, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
 
       {/* ── Row 2: Bottle (full width) ────────────────────────────────────── */}
       <Tile
         visible={s(0)}
         src={imgTequilaBottle}
-        style={{ left: 5, top: 230, width: 392, height: 285 }}
+        style={{ left: 0, top: 292, width: 402, height: 290 }}
         imgStyle={{ objectPosition: "center 30%" }}
-        measure="45ml"
-        label="Don Julio Reposado"
       />
-
-      {/* "The Reposado Paloma" title — fades in with the bottle */}
-      <motion.p
-        style={{
-          position: "absolute",
-          right: 18,
-          top: 242,
-          fontFamily: "Spectral, serif",
-          fontWeight: 700,
-          fontStyle: "italic",
-          fontSize: 34,
-          color: "white",
-          lineHeight: 1.0,
-          margin: 0,
-          textAlign: "right",
-          textShadow: "0 2px 20px rgba(0,0,0,0.95)",
-          letterSpacing: -0.4,
-          pointerEvents: "none",
-          zIndex: 2,
-        }}
-        initial={{ opacity: 0 }}
-        animate={s(0) ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ duration: 1.1, ease: easeOut, delay: 0.5 }}
-      >
-        The<br />Reposado<br />Paloma
-      </motion.p>
 
       {/* ── Row 3: Agave (left) + Cilantro (right) ────────────────────────── */}
       <Tile
         visible={s(3)}
         src={imgAgave}
-        style={{ left: 5, top: 520, width: 195, height: 225 }}
-        measure="15ml"
-        label="Agave Nectar"
+        style={{ left: 0, top: 584, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
       <Tile
         visible={s(4)}
         src={imgCilantro}
-        style={{ left: 205, top: 520, width: 192, height: 225 }}
-        measure="Handful of"
-        label="Fresh Cilantro"
+        style={{ left: 202, top: 584, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
 
     </div>

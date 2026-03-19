@@ -378,13 +378,17 @@ function FlavorPicker({ options, selected, onToggle, onConfirm }: {
         What calls to you?
       </p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, flex: 1 }}>
-        {options.map(opt => {
+        {options.map((opt, i) => {
           const sel = selected.includes(opt.id);
+          const floatDelay = i * 0.38;
+          const floatAmt = 5 + (i % 3) * 2;
           return (
             <motion.button
               key={opt.id}
               onClick={() => onToggle(opt.id)}
-              whileTap={{ scale: 0.95 }}
+              animate={{ y: [0, -floatAmt, 0] }}
+              transition={{ duration: 3.2 + (i % 3) * 0.5, repeat: Infinity, ease: "easeInOut", delay: floatDelay }}
+              whileTap={{ scale: 0.94 }}
               style={{
                 position: "relative", borderRadius: 14, overflow: "hidden",
                 border: sel ? "2.5px solid white" : "2px solid rgba(255,255,255,0.12)",

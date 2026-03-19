@@ -88,8 +88,8 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 ];
 
 // ── Flavor picker options ─────────────────────────────────────────────────────
-const FLAVOR_PICK_STEP  = 8;
-const FLAVOR_BUILD_STEP = 9;
+const FLAVOR_PICK_STEP  = 7;
+const FLAVOR_BUILD_STEP = 8;
 interface FlavorOption { id: string; label: string; src: string; }
 const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "citrus",  label: "Citrus",        src: imgDrinkB },
@@ -131,9 +131,7 @@ const STEPS: Step[] = [
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 2 — confirmation with tiles
   { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 3 — bridge
-  { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 4 — tone intro, waits for voice to finish before advancing to bottle prompt
+  // 3 — tone intro, waits for voice to finish before advancing to bottle prompt
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 5 — auto-advances after voice (no mic tap needed)
   { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
@@ -160,7 +158,7 @@ const STEPS: Step[] = [
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 7;
+const BOTTLE_RESPONSE_STEP = 6;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.",

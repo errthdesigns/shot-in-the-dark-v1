@@ -110,7 +110,7 @@ const STEPS: Step[] = [
   // 1 — date/time question
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 2 — confirmation with tiles
-  { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
+  { aiText: "Six guests. 26th February.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
   // 3 — tone intro, waits for voice to finish before advancing to bottle prompt
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 5 — auto-advances after voice (no mic tap needed)
@@ -124,7 +124,7 @@ const STEPS: Step[] = [
   // 9 — shopping cart
   { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
   // 10 — apple pay sheet (triggered by "Continue with Apple Pay" button)
-  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
+  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────

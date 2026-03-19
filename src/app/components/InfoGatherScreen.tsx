@@ -284,7 +284,6 @@ function TexasMap({
           alignItems: "center", justifyContent: "center",
           pointerEvents: "none", gap: 8,
         }}>
-          <span style={{ fontSize: 28 }}>📍</span>
           <p style={{
             fontFamily: "Inter, sans-serif", fontSize: 11,
             color: "rgba(255,255,255,0.5)", letterSpacing: 1.5,
@@ -463,8 +462,9 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
   // Speak question on panel entry
   useEffect(() => {
+    stopSpeech();
     const id = setTimeout(() => speakText(VOICE_LINES[panel]), 120);
-    return () => { clearTimeout(id); stopSpeech(); };
+    return () => { clearTimeout(id); };
   }, [panelIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll selected date into view

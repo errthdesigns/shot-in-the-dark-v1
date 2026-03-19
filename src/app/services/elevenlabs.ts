@@ -79,7 +79,7 @@ function toSSML(text: string): string {
     .replace(/!\s*/g,   '!<break time="380ms"/> ')
     .replace(/,\s*/g,   ',<break time="180ms"/> ')
     .replace(/\n+/g,    '<break time="650ms"/>');
-  return `<speak><prosody pitch="-2st" rate="90%">${paced}</prosody></speak>`;
+  return `<speak><prosody pitch="-5st" rate="88%">${paced}</prosody></speak>`;
 }
 
 export async function speakText(text: string): Promise<void> {

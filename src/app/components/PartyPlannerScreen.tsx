@@ -34,6 +34,9 @@ import imgDrinkI from "figma:asset/cfa68884a3f8e09e7e4c165c86b42b8d9d23664a.png"
 import imgDrinkJ from "figma:asset/33e25f39a0f2e453dfd6bfa208f332f644a2da71.png";
 import imgDrinkK from "figma:asset/5b873ac3b3d33a7fc5b92bb7718e0bacd44d94b3.png";
 import imgDrinkL from "figma:asset/5d7e916fcf23b5e34746902373fb092a3decd6e7.png";
+// Reposado Paloma ingredient images — used in FlavorSuggest (screen 8)
+import imgPalomaGrapefruit from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
+import imgPalomaLime       from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
 
@@ -113,8 +116,8 @@ const STEPS: Step[] = [
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — flavor picker: AI asks the question aloud while tiles float in the void
-  { aiText: "What calls to you?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
+  // 8 — flavor suggestion: AI reveals the Paloma ingredients as a collage
+  { aiText: "These are the flavours I would suggest. Happy?", aiY: 60, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
   // 9 — recipe card: after flavor pick, bartender goes straight to work
 
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
@@ -335,6 +338,99 @@ const FLAVOR_VOID_POSITIONS = [
   { x:  130, y:  205, rotZ:  6.3, w: 148, h: 160 },
 ];
 
+// ── Flavor suggest — Figma collage layout: Paloma ingredients with label tabs ──
+const SUGGEST_ITEMS = [
+  // Left column
+  { src: imgPalomaGrapefruit, label: "Grapefruit", color: "#E5311C", top: 148, left: 12,  w: 218, h: 255, col: "left"   as const, imgStyle: {} },
+  { src: imgDrinkE,           label: "Agave Nectar",color: "#C8820A", top: 418, left: 12,  w: 218, h: 155, col: "bottom" as const, imgStyle: {} },
+  { src: imgDrinkC,           label: "Club Soda",   color: "#E06020", top: 584, left: 12,  w: 218, h: 132, col: "left"   as const, imgStyle: {} },
+  // Right column
+  { src: imgPalomaLime,       label: "Lime",        color: "#4AB856", top: 200, left: 242, w: 146, h: 198, col: "right"  as const, imgStyle: { objectPosition: "center 60%" } },
+  { src: imgDrinkB,           label: "Cilantro",    color: "#27AE60", top: 410, left: 242, w: 146, h: 155, col: "right"  as const, imgStyle: {} },
+] as const;
+
+const TAB_W = 34;
+
+function SuggestTile({ src, label, color, top, left, w, h, col, imgStyle }: {
+  src: string; label: string; color: string;
+  top: number; left: number; w: number; h: number;
+  col: "left" | "right" | "bottom";
+  imgStyle: React.CSSProperties;
+}) {
+  return (
+    <motion.div
+      style={{ position: "absolute", top, left, width: w, height: h, overflow: "visible" }}
+      initial={{ opacity: 0, scale: 0.94, y: 12 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {/* Image */}
+      <div style={{ width: w, height: h, borderRadius: 14, overflow: "hidden", position: "relative" }}>
+        <img src={src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...imgStyle }} />
+        {/* Bottom label (Agave Nectar) */}
+        {col === "bottom" && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "10px 14px 12px", background: "linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)" }}>
+            <p style={{ fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic", fontSize: 17, color: "white", margin: 0 }}>{label}</p>
+          </div>
+        )}
+      </div>
+      {/* Right-extending label tab — left column extends into gap, right column is flush inside */}
+      {col !== "bottom" && (
+        <div style={{
+          position: "absolute",
+          top: Math.round(h * 0.3),
+          right: col === "left" ? -(TAB_W) : 0,
+          width: TAB_W,
+          height: Math.min(100, Math.round(h * 0.42)),
+          backgroundColor: color,
+          borderRadius: col === "left" ? "0 5px 5px 0" : "0 14px 14px 0",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          overflow: "hidden",
+          zIndex: 2,
+        }}>
+          <span style={{
+            transform: "rotate(90deg)", display: "block",
+            fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
+            fontSize: 13, color: "white", whiteSpace: "nowrap", letterSpacing: 0.2,
+          }}>{label}</span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function FlavorSuggest({ onConfirm }: { onConfirm: () => void }) {
+  return (
+    <motion.div
+      key="flavor-suggest"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.55 }}
+      style={{ position: "absolute", inset: 0 }}
+    >
+      {SUGGEST_ITEMS.map((item, i) => (
+        <SuggestTile key={item.label} {...item} />
+      ))}
+
+      {/* Confirm button — same position as old "Build it →" */}
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.8 }}
+        onClick={onConfirm}
+        style={{
+          position: "absolute", bottom: 36, left: 28, right: 28,
+          height: 52, borderRadius: 26, backgroundColor: "white",
+          border: "none", cursor: "pointer",
+          fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 18,
+          color: "black", letterSpacing: -0.3,
+        }}
+      >
+        Happy? →
+      </motion.button>
+    </motion.div>
+  );
+}
+
 // ── Flavor picker — title + confirm button overlay only (images live in AutoGallery tileSlots) ──
 function FlavorPicker({ selected, onConfirm }: {
   selected: string[];
@@ -410,12 +506,9 @@ export function PartyPlannerScreen() {
   const showGallery =
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
-    current.imgState === "keyword-reveal" ||
-    current.view === "flavor-pick";
+    current.imgState === "keyword-reveal";
 
-  // Keyword/flavor steps use empty image array — AutoGallery runs as tiles-only void
   const currentGalleryImages =
-    current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
@@ -468,41 +561,6 @@ export function PartyPlannerScreen() {
         ),
       });
     }
-  }
-
-  // ── Flavor picker TileSlots ──────────────────────────────────────────────────
-  if (current.view === "flavor-pick") {
-    FLAVOR_OPTIONS.forEach((opt, i) => {
-      const pos = FLAVOR_VOID_POSITIONS[i];
-      const isSel = selectedFlavors.includes(opt.id);
-      tileSlots.push({
-        id: `flavor-${opt.id}`,
-        x: pos.x, y: pos.y, rotZ: pos.rotZ,
-        w: pos.w, h: pos.h, radius: 12,
-        children: (
-          <button
-            onClick={() => setSelectedFlavors(prev =>
-              prev.includes(opt.id) ? prev.filter(x => x !== opt.id) : [...prev, opt.id]
-            )}
-            style={{ display: "block", width: "100%", height: "100%", border: "none", padding: 0, cursor: "pointer", background: "none", position: "relative" }}
-          >
-            <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
-            {isSel && <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2.5px white" }} />}
-            {isSel && (
-              <div style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
-                  <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            )}
-            <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
-              {opt.label}
-            </p>
-          </button>
-        ),
-      });
-    });
   }
 
   if (current.imgState === "gatsby-reveal") {
@@ -686,7 +744,7 @@ export function PartyPlannerScreen() {
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
-        {!showGallery && current.view === "chat" && (
+        {!showGallery && (current.view === "chat" || current.view === "flavor-pick") && (
           <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
             style={{ position: "absolute", inset: 0 }}
           >
@@ -767,13 +825,10 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Flavor picker ───────────────────────────────────────────────────────── */}
+      {/* ── Flavor suggestion (Paloma ingredient collage) ──────────────────────── */}
       <AnimatePresence>
         {current.view === "flavor-pick" && (
-          <FlavorPicker
-            selected={selectedFlavors}
-            onConfirm={handleFlavorConfirm}
-          />
+          <FlavorSuggest onConfirm={handleFlavorConfirm} />
         )}
       </AnimatePresence>
 

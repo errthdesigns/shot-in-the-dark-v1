@@ -139,8 +139,8 @@ const STEPS: Step[] = [
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — flavor picker: user taps ingredient image tiles (built-in confirm button)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
+  // 8 — flavor picker: AI asks the question aloud while tiles float in the void
+  { aiText: "What calls to you?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
   // 9 — cocktail build reveal: dynamic text from flavor picks, speechAdvance, void with tiles
   { aiText: "", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 10 — recipe card with sequential ingredient spawn
@@ -169,8 +169,12 @@ const BOTTLE_RESPONSES: Record<string, string> = {
 function resolveAiText(stepIdx: number, bottle: string | null, flavors: string[]): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
   if (stepIdx === FLAVOR_BUILD_STEP) {
-    const lines = flavors.filter(f => FLAVOR_LINES[f]).map(f => FLAVOR_LINES[f]).join("\n");
-    return `${lines || "Interesting choices."}\n\nThe Velvet Alibi.\nI knew it before you finished.`;
+    // Line 1: all chosen flavors summarised in one punchy line
+    const flavorList = flavors.length
+      ? flavors.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(". ") + "."
+      : "Interesting choices.";
+    // Line 2: the reveal — always 2 lines max
+    return `${flavorList}\n\nThe Velvet Alibi.`;
   }
   return STEPS[stepIdx].aiText;
 }
@@ -378,14 +382,6 @@ function FlavorPicker({ selected, onConfirm }: {
       transition={{ duration: 0.55 }}
       style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
-      <p style={{
-        position: "absolute", top: 72, left: 0, right: 0,
-        fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 22,
-        color: "white", textAlign: "center", margin: 0,
-        lineHeight: 1.25, letterSpacing: -0.3,
-      }}>
-        What calls to you?
-      </p>
       <AnimatePresence>
         {selected.length > 0 && (
           <motion.button

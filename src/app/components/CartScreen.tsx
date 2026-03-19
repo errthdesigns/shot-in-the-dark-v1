@@ -44,8 +44,10 @@ function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price
   );
 }
 
-export function CartScreen({ onApplePay, budgetPerHead = 60, guests = 6 }: CartScreenProps) {
-  const total = (budgetPerHead * guests).toFixed(2);
+const CART_ITEM_TOTAL = 54.99 + 12.99 + 0.99 + 4.99 + 3.99 + 1.99; // sum of all fixed items
+
+export function CartScreen({ onApplePay }: CartScreenProps) {
+  const total = CART_ITEM_TOTAL.toFixed(2);
   return (
     <motion.div
       key="cart-sheet"

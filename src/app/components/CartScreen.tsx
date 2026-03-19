@@ -3,6 +3,8 @@ import { motion } from "motion/react";
 import imgTequila from "figma:asset/c53c7a45987dfc7eb6c4e7a8d3d99e4b06d4258b.png";
 import imgLime from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
 import imgGrapefruit from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
+import imgAgave from "figma:asset/fdbf08631a64c7759f8f34e345f24dd602054d7d.png";
+import imgCilantro from "figma:asset/bebb630f58426b309f126863bf068e9875b1c0c6.png";
 
 interface CartScreenProps {
   onApplePay: () => void;
@@ -44,7 +46,8 @@ function EmojiRow({ emoji, label, price }: { emoji: string; label: string; price
   );
 }
 
-const CART_ITEM_TOTAL = 54.99 + 12.99 + 0.99 + 4.99 + 3.99 + 1.99; // sum of all fixed items
+// Reposado Paloma: tequila + grapefruit + lime + agave nectar + cilantro
+const CART_ITEM_TOTAL = 54.99 + 1.99 + 0.99 + 4.99 + 1.99;
 
 export function CartScreen({ onApplePay }: CartScreenProps) {
   const total = CART_ITEM_TOTAL.toFixed(2);
@@ -104,7 +107,18 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
           <p style={PRICE_LABEL}>$54.99</p>
         </div>
 
-        <EmojiRow emoji="🍊" label="Orange Bitters" price="$12.99" />
+        {/* Grapefruit — image */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
+          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img
+              alt=""
+              src={imgGrapefruit}
+              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
+            />
+          </div>
+          <p style={ITEM_LABEL}>Fresh Grapefruit</p>
+          <p style={PRICE_LABEL}>$1.99</p>
+        </div>
 
         {/* Lime — image */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
@@ -115,23 +129,33 @@ export function CartScreen({ onApplePay }: CartScreenProps) {
               style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
             />
           </div>
-          <p style={ITEM_LABEL}>Lime</p>
+          <p style={ITEM_LABEL}>Fresh Lime</p>
           <p style={PRICE_LABEL}>$0.99</p>
         </div>
 
-        <EmojiRow emoji="🍫" label="Dark Chocolate Shavings" price="$4.99" />
-        <EmojiRow emoji="🌶️" label="Chilli Powder" price="$3.99" />
-
-        {/* Grapefruit — image */}
+        {/* Agave Nectar — image */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
           <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img
               alt=""
-              src={imgGrapefruit}
+              src={imgAgave}
               style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
             />
           </div>
-          <p style={ITEM_LABEL}>Grapefruit</p>
+          <p style={ITEM_LABEL}>Agave Nectar</p>
+          <p style={PRICE_LABEL}>$4.99</p>
+        </div>
+
+        {/* Fresh Cilantro — image */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
+          <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img
+              alt=""
+              src={imgCilantro}
+              style={{ width: 58, height: 58, objectFit: "cover", display: "block" }}
+            />
+          </div>
+          <p style={ITEM_LABEL}>Fresh Cilantro</p>
           <p style={PRICE_LABEL}>$1.99</p>
         </div>
 

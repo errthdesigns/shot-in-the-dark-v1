@@ -47,31 +47,6 @@ const DRINK_IMAGES_B    = [imgDrinkD, imgDrinkF, imgDrinkI, imgDrinkJ, imgDrinkK
 const DRINK_IMAGES_SPICE = [imgDrinkH, imgDrinkE, imgDrinkB, imgDrinkF, imgDrinkC, imgDrinkG];
 const GATSBY_COMBINED   = [...PARTY_IMAGES, imgDrinkK, imgDrinkI, imgDrinkJ, imgGatsbyA, imgGatsbyB];
 
-// ── Cocktail build — keyword-triggered items for steps 15-17 ─────────────────
-// cx,cy = EXPLICIT center-relative void positions (spread wide across phone)
-// AutoGallery anchor: left:50%=201px, top:48%=420px of phone (402×874)
-interface CocktailItem {
-  id: string;
-  keyword?: string;
-  type: "img" | "orange-bitters" | "chilli" | "chocolate";
-  src?: string;
-  x: number; y: number; w: number; h: number;
-  radius?: number;
-  rotZ: number;
-  cx: number; cy: number;  // explicit wide-spread void positions
-}
-const COCKTAIL_BUILD_ITEMS: CocktailItem[] = [
-  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 190, h: 170, radius:  9.131, rotZ: -3.5, cx:   90, cy: -140 },
-  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  65, h:  78,            rotZ:  5.2, cx:  155, cy:  -60 },
-  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 165, h: 165, radius: 82,    rotZ: -6.0, cx:   80, cy:   30 },
-  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 155, h: 190, radius:  9.131, rotZ:  4.0, cx: -105, cy: -100 },
-  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w: 110, h: 100, radius: 55,    rotZ: -8.0, cx: -145, cy:   10 },
-  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 220, h: 140, radius:  9.131, rotZ:  3.5, cx:   65, cy:  150 },
-  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 165, h:  90,                  rotZ: -4.0, cx:  -50, cy:  130 },
-  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 155, h: 240, radius:  9.131, rotZ:  6.0, cx: -105, cy:  155 },
-  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  80, h:  50,                  rotZ: -5.5, cx: -150, cy:  110 },
-];
-
 // ── Keyword-triggered ingredient images (step 13) ─────────────────────────────
 interface IngredientDef {
   keyword: string;
@@ -89,7 +64,6 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 
 // ── Flavor picker options ─────────────────────────────────────────────────────
 const FLAVOR_PICK_STEP  = 7;
-const FLAVOR_BUILD_STEP = 8;
 interface FlavorOption { id: string; label: string; src: string; }
 const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "citrus",  label: "Citrus",        src: imgDrinkB },
@@ -110,7 +84,7 @@ const FLAVOR_LINES: Record<string, string> = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
-type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build";
+type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice";
 type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
@@ -141,9 +115,8 @@ const STEPS: Step[] = [
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 8 — flavor picker: AI asks the question aloud while tiles float in the void
   { aiText: "What calls to you?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
-  // 9 — cocktail build reveal: dynamic text from flavor picks, speechAdvance, void with tiles
-  { aiText: "", aiY: 85, userText: "", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 10 — recipe card with sequential ingredient spawn
+  // 9 — recipe card: after flavor pick, bartender goes straight to work
+
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
   // 12 — invite preview: waits for mic tap before revealing invite
   { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
@@ -166,16 +139,8 @@ const BOTTLE_RESPONSES: Record<string, string> = {
   blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.",
 };
 
-function resolveAiText(stepIdx: number, bottle: string | null, flavors: string[]): string {
+function resolveAiText(stepIdx: number, bottle: string | null): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
-  if (stepIdx === FLAVOR_BUILD_STEP) {
-    // Line 1: all chosen flavors summarised in one punchy line
-    const flavorList = flavors.length
-      ? flavors.map(f => f.charAt(0).toUpperCase() + f.slice(1)).join(". ") + "."
-      : "Interesting choices.";
-    // Line 2: the reveal — always 2 lines max
-    return `${flavorList}\n\nThe Velvet Alibi.`;
-  }
   return STEPS[stepIdx].aiText;
 }
 
@@ -414,8 +379,6 @@ export function PartyPlannerScreen() {
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [lastEmail, setLastEmail]       = useState("");
   const [revealedKeywords, setRevealedKeywords] = useState<Set<string>>(new Set());
-  // buildKeywords accumulates across steps 12-14 (does NOT reset between them)
-  const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
   // Video plays after intro
@@ -447,15 +410,13 @@ export function PartyPlannerScreen() {
   const showGallery =
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
-    current.imgState === "cocktail-build" ||
     current.imgState === "keyword-reveal" ||
     current.view === "flavor-pick";
 
-  // Cocktail/keyword/flavor steps use empty image array — AutoGallery runs as tiles-only void
+  // Keyword/flavor steps use empty image array — AutoGallery runs as tiles-only void
   const currentGalleryImages =
     current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
-    current.imgState === "cocktail-build" ? [] :
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
 
@@ -509,38 +470,7 @@ export function PartyPlannerScreen() {
     }
   }
 
-  if (current.imgState === "cocktail-build") {
-    COCKTAIL_BUILD_ITEMS.forEach((item) => {
-      if (item.keyword && !buildKeywords.has(item.id)) return;
-      tileSlots.push({
-        id: `cb-${item.id}`, x: item.cx, y: item.cy, rotZ: item.rotZ,
-        w: item.w, h: item.h, radius: item.radius ?? 4.565,
-        children: (
-          item.type === "img" ? (
-            <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          ) : item.type === "orange-bitters" ? (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#e5311c", position: "relative" }}>
-              <div style={{ position: "absolute", left: 21.91, top: 5.48, width: 32, height: 57.979, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ transform: "rotate(-90deg)" }}>
-                  <p style={{ fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 16.435, color: "black", lineHeight: 1, margin: 0, width: 57.979 }}>Orange Bitters</p>
-                </div>
-              </div>
-            </div>
-          ) : item.type === "chilli" ? (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#fb1a00", position: "relative" }}>
-              <p style={{ position: "absolute", fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 13.696, color: "white", lineHeight: 1.4, left: 3.65, top: 2.28, width: 49.305, margin: 0 }}>Chilli</p>
-            </div>
-          ) : (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#342614", position: "relative" }}>
-              <p style={{ position: "absolute", fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 13.696, color: "white", lineHeight: 1.4, left: 4.11, top: 56.15, width: 128.285, margin: 0, whiteSpace: "nowrap" }}>Chocolate Shavings</p>
-            </div>
-          )
-        ),
-      });
-    });
-  }
-
-  // ── Flavor picker TileSlots — fly through the same 3D void as cocktail-build ──
+  // ── Flavor picker TileSlots ──────────────────────────────────────────────────
   if (current.view === "flavor-pick") {
     FLAVOR_OPTIONS.forEach((opt, i) => {
       const pos = FLAVOR_VOID_POSITIONS[i];
@@ -604,8 +534,6 @@ export function PartyPlannerScreen() {
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 8-9 window
-    if (step < 8 || step > 9) setBuildKeywords(new Set()); // step 9 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
@@ -616,7 +544,7 @@ export function PartyPlannerScreen() {
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
-    const text  = resolveAiText(step, selectedBottle, selectedFlavors);
+    const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
     const myStep = step;
     let i = 0;
@@ -717,22 +645,6 @@ export function PartyPlannerScreen() {
     });
   }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 6: cocktail-build keyword reveal (steps 15-17, accumulates) ───────
-  useEffect(() => {
-    if (current.imgState !== "cocktail-build") return;
-    const lower = aiDisplay.toLowerCase();
-    setBuildKeywords((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const item of COCKTAIL_BUILD_ITEMS) {
-        if (item.keyword && !next.has(item.id) && lower.includes(item.keyword)) {
-          next.add(item.id); changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Mic click ───────────────────────────────────────────────────────────────
   const handleMicClick = () => {
     unlockAudio(); // keep AudioContext alive on every tap
@@ -747,7 +659,6 @@ export function PartyPlannerScreen() {
   };
 
   const handleFlavorConfirm = () => {
-    setBuildKeywords(new Set(COCKTAIL_BUILD_ITEMS.map(i => i.id)));
     setStep(s => Math.min(s + 1, STEPS.length - 1));
   };
 

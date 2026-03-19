@@ -528,7 +528,7 @@ export function PartyPlannerScreen() {
         x: pos.x, y: pos.y, rotZ: pos.rotZ,
         w: pos.w, h: pos.h, radius: 12,
         children: (
-          <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 0%", display: "block" }} />
         ),
       });
     });

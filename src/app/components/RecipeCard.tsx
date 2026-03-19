@@ -105,11 +105,12 @@ export function RecipeCard() {
 
   const s = (n: number) => stage >= n;
 
-  // ── Layout  (402 × 874 canvas; ~110px bottom reserved for the mic bar → ~764px usable)
-  // 3 equal rows, 2px gap between them
-  // Row 1 (top):    grapefruit left  | lime right        — h 253, top 0
-  // Row 2 (middle): bottle full-width                    — h 255, top 255
-  // Row 3 (bottom): agave left       | cilantro right    — h 253, top 512
+  // ── Layout  (402 × 874 canvas — tiles fill the full height, mic bar floats on top)
+  // 3 equal rows × 290px, 2px gap between each → 290+2+290+2+290 = 874px
+  // Portrait images (370×534) anchored to bottom so baked-in text labels are always visible
+  // Row 1 (top):    grapefruit left  | lime right        — h 290, top 0
+  // Row 2 (middle): bottle full-width                    — h 290, top 292
+  // Row 3 (bottom): agave left       | cilantro right    — h 290, top 584
 
   return (
     <div style={{ position: "absolute", inset: 0, backgroundColor: "#0A0A0A", overflow: "hidden" }}>
@@ -118,20 +119,21 @@ export function RecipeCard() {
       <Tile
         visible={s(1)}
         src={imgGrapefruit}
-        style={{ left: 0, top: 0, width: 200, height: 253 }}
+        style={{ left: 0, top: 0, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
       <Tile
         visible={s(2)}
         src={imgLime}
-        style={{ left: 202, top: 0, width: 200, height: 253 }}
-        imgStyle={{ objectPosition: "center 60%" }}
+        style={{ left: 202, top: 0, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
 
       {/* ── Row 2: Bottle (full width) ────────────────────────────────────── */}
       <Tile
         visible={s(0)}
         src={imgTequilaBottle}
-        style={{ left: 0, top: 255, width: 402, height: 255 }}
+        style={{ left: 0, top: 292, width: 402, height: 290 }}
         imgStyle={{ objectPosition: "center 30%" }}
       />
 
@@ -139,12 +141,14 @@ export function RecipeCard() {
       <Tile
         visible={s(3)}
         src={imgAgave}
-        style={{ left: 0, top: 512, width: 200, height: 253 }}
+        style={{ left: 0, top: 584, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
       <Tile
         visible={s(4)}
         src={imgCilantro}
-        style={{ left: 202, top: 512, width: 200, height: 253 }}
+        style={{ left: 202, top: 584, width: 200, height: 290 }}
+        imgStyle={{ objectPosition: "50% 100%" }}
       />
 
     </div>

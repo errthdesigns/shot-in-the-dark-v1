@@ -132,7 +132,7 @@ const BOTTLE_RESPONSE_STEP = 6;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
   cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.",
-  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.",
+  reposado:   "Reposado.\n\nSmoke, leather, and a debt someone left unpaid.\n\nTonight's theme is Western Noir.",
   blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.",
 };
 
@@ -177,12 +177,12 @@ function GridIcon() {
 }
 
 // ─── Thinking dots ────────────────────────────────────────────────────────────
-function ThinkingDots({ aiY }: { aiY: number; isEmail: boolean }) {
+function ThinkingDots() {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
       transition={{ duration: 0.2 }}
-      style={{ position: "absolute", left: "50%", top: aiY, transform: "translateX(-50%)", display: "flex", gap: 9, alignItems: "center" }}
+      style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center" }}
     >
       {[0, 1, 2].map((i) => (
         <motion.div key={i}
@@ -592,6 +592,7 @@ export function PartyPlannerScreen() {
 
     // Speak the full line concurrently with the typewriter animation (skip if noVoice)
     if (text.trim() && !s.noVoice) {
+      unlockAudio();
       if (s.speechAdvance) {
         speakText(text).then(() => {
           voiceDone = true;
@@ -677,10 +678,9 @@ export function PartyPlannerScreen() {
 
   // ── Mic click ───────────────────────────────────────────────────────────────
   const handleMicClick = () => {
-    unlockAudio(); // keep AudioContext alive on every tap
+    unlockAudio();
     if (phase !== "ready") return;
-    if (!STEPS[step].userText) { setStep((st) => Math.min(st + 1, STEPS.length - 1)); return; }
-    setPhase("recording");
+    setStep((st) => Math.min(st + 1, STEPS.length - 1));
   };
 
   const handleBottleSelect = (id: string) => {
@@ -712,7 +712,7 @@ export function PartyPlannerScreen() {
   const showUserBox = !isPaymentView && !isBottleSelect && isRecording;
 
   return (
-    <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
+    <div onClick={handleMicClick} style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
@@ -805,7 +805,7 @@ export function PartyPlannerScreen() {
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isThinking && !isBottleSelect && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
+        {isThinking && !isBottleSelect && <ThinkingDots key={`dots-${step}`} />}
       </AnimatePresence>
 
       {/* ── Ambient glow while AI types ──────────────────────────────────────── */}
@@ -822,9 +822,7 @@ export function PartyPlannerScreen() {
         {!isThinking && aiDisplay && !isBottleSelect && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            style={isEmailStep
-              ? { position: "absolute", left: 25, top: current.aiY, width: 343, textAlign: "center" }
-              : { position: "absolute", left: "50%", top: current.aiY, transform: "translateX(-50%)", width: 352, textAlign: "center" }}
+            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 352, textAlign: "center" }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontWeight: current.fontVariant === "semibold-italic" ? 600 : 400, fontStyle: current.fontVariant === "semibold-italic" ? "italic" : "normal", fontSize: 24, color: "white", lineHeight: 1.15, letterSpacing: current.fontVariant === "semibold-italic" ? -0.48 : 0, margin: 0, whiteSpace: "pre-wrap" }}>
               <BlurText text={aiDisplay} isTyping={isAiTyping} />
@@ -832,84 +830,6 @@ export function PartyPlannerScreen() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── User voice box ───────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showUserBox && (
-          <motion.div key="user-box"
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8, transition: { duration: 0.22 } }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
-            style={{ position: "absolute", left: 20, top: 688, width: 352, minHeight: 52, padding: "14px 18px", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", border: `1px solid ${phase === "recording" ? "#8B2E2E" : "#838383"}`, boxSizing: "border-box", transition: "border-color 0.3s" }}
-          >
-            {phase === "recording" ? <Waveform /> : (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <AnimatePresence>
-                  {isUserTyping && (
-                    <motion.div key="dot" initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }} transition={{ duration: 0.2 }}
-                      style={{ flexShrink: 0, width: 6, height: 6, borderRadius: "50%", backgroundColor: "#e5311c", animation: "voicePulse 0.65s ease-in-out infinite" }}
-                    />
-                  )}
-                </AnimatePresence>
-                <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", textAlign: "center", lineHeight: 1.5, margin: 0, flex: 1 }}>
-                  <UserText text={userDisplay} />{isUserTyping && <Cursor />}
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── LISTENING badge ──────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === "recording" && (
-          <motion.div key="listening"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.25 }}
-            style={{ position: "absolute", left: "50%", top: 750, transform: "translate(-50%, -50%)", display: "flex", alignItems: "center", gap: 7, pointerEvents: "none" }}
-          >
-            <motion.div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#8B2E2E" }}
-              animate={{ scale: [1, 1.7, 1], opacity: [1, 0.4, 1] }} transition={{ duration: 0.72, repeat: Infinity }} />
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2.5 }}>LISTENING</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Ready-pulse ring (hidden on payment views) ───────────────────────── */}
-      <AnimatePresence>
-        {isReady && !isPaymentView && !isBottleSelect && (
-          <motion.div key="ring"
-            style={{ position: "absolute", left: 160, top: 759, width: 82, height: 82, borderRadius: 41, border: "1.5px solid rgba(255,255,255,0.28)", pointerEvents: "none" }}
-            animate={{ scale: [1, 1.55], opacity: [0.55, 0] }}
-            transition={{ duration: 1.3, repeat: Infinity, ease: "easeOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Recording pulse ring ─────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === "recording" && (
-          <motion.div key="rec-ring"
-            style={{ position: "absolute", left: 157, top: 756, width: 88, height: 88, borderRadius: 44, border: "2px solid #8B2E2E", pointerEvents: "none" }}
-            animate={{ scale: [1, 1.65, 1], opacity: [0.85, 0, 0.85] }}
-            transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Mic button (hidden on payment + bottle-select views) ── */}
-      <motion.button
-        onClick={handleMicClick} disabled={!isReady || isPaymentView || isBottleSelect}
-        style={{ position: "absolute", left: 168, top: 767, width: 66, height: 66, borderRadius: 33, border: "none", cursor: isReady && !isPaymentView && !isBottleSelect ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 22px", boxSizing: "border-box", zIndex: 10, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}
-        animate={{ backgroundColor: phase === "recording" ? "#8B2E2E" : isReady ? ["#383838", "#444", "#383838"] : "#383838", scale: phase === "recording" ? [1, 1.06, 1] : 1 }}
-        transition={phase === "recording" ? { scale: { duration: 0.9, repeat: Infinity }, backgroundColor: { duration: 0.3 } } : isReady ? { duration: 2.2, repeat: Infinity } : {}}
-        whileHover={isReady ? { scale: 1.08 } : {}} whileTap={isReady ? { scale: 0.88 } : {}}
-      >
-        <MicIcon />
-      </motion.button>
-
-      {/* X + Grid buttons — hidden on payment + bottle-select views */}
-      <div style={{ position: "absolute", left: 107, top: 778, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><XIcon /></div>
-      <div style={{ position: "absolute", left: 250, top: 778, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}><GridIcon /></div>
 
       {/* ── Step indicator pills ─────────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>

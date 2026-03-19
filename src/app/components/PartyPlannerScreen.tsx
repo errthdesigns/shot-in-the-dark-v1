@@ -456,7 +456,6 @@ export function PartyPlannerScreen() {
   const clearAll     = () => { clearType(); clearThink(); clearAdvance(); };
 
   const current     = STEPS[step];
-  const isEmailStep = current.view === "email";
   // Show AutoGallery for photo steps AND void steps (keyword, flavor-pick — tiles only, no photos)
   const showGallery =
     current.imgState === "full" ||
@@ -705,11 +704,8 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking  = phase === "thinking";
-  const isReady     = phase === "ready";
-  const isRecording = phase === "recording" || phase === "transcribing";
   const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
   const isBottleSelect  = current.view === "bottle-select";
-  const showUserBox = !isPaymentView && !isBottleSelect && isRecording;
 
   return (
     <div onClick={handleMicClick} style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>

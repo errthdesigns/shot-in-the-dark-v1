@@ -358,111 +358,36 @@ function DateTileContent() {
   );
 }
 
-// ── Flavor picker void positions (same coordinate space as AutoGallery IMG_POSITIONS) ──
+// ── Flavor picker void positions (TileSlot x/y = offset from AutoGallery center 50%/48%) ──
 const FLAVOR_VOID_POSITIONS = [
-  { x:  -85, y: -205, rotZ: -5.5, w: 178, h: 152, floatAmt:  8, dur: 3.4, delay: 0.0 },
-  { x:  135, y: -155, rotZ:  4.2, w: 148, h: 172, floatAmt: 11, dur: 3.0, delay: 0.5 },
-  { x: -155, y:  -15, rotZ: -7.0, w: 158, h: 140, floatAmt:  7, dur: 3.8, delay: 0.9 },
-  { x:  118, y:   60, rotZ:  5.8, w: 144, h: 155, floatAmt: 12, dur: 3.2, delay: 0.3 },
-  { x:  -62, y:  180, rotZ: -3.8, w: 184, h: 150, floatAmt:  9, dur: 4.1, delay: 0.7 },
-  { x:  128, y:  198, rotZ:  6.3, w: 148, h: 162, floatAmt: 10, dur: 3.6, delay: 1.1 },
+  { x:  -90, y: -170, rotZ: -5.5, w: 175, h: 155 },
+  { x:  135, y: -130, rotZ:  4.2, w: 150, h: 170 },
+  { x: -155, y:   20, rotZ: -7.0, w: 155, h: 140 },
+  { x:  120, y:   70, rotZ:  5.8, w: 145, h: 155 },
+  { x:  -55, y:  185, rotZ: -3.8, w: 180, h: 148 },
+  { x:  130, y:  205, rotZ:  6.3, w: 148, h: 160 },
 ];
 
-// ── Flavor picker ─────────────────────────────────────────────────────────────
-function FlavorPicker({ options, selected, onToggle, onConfirm }: {
-  options: FlavorOption[];
+// ── Flavor picker — title + confirm button overlay only (images live in AutoGallery tileSlots) ──
+function FlavorPicker({ selected, onConfirm }: {
   selected: string[];
-  onToggle: (id: string) => void;
   onConfirm: () => void;
 }) {
   return (
     <motion.div
       key="flavor-picker"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.55 }}
-      style={{ position: "absolute", inset: 0 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
-      {/* Title */}
       <p style={{
         position: "absolute", top: 72, left: 0, right: 0,
         fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 22,
         color: "white", textAlign: "center", margin: 0,
-        lineHeight: 1.25, letterSpacing: -0.3, zIndex: 10,
+        lineHeight: 1.25, letterSpacing: -0.3,
       }}>
         What calls to you?
       </p>
-
-      {/* Void — same perspective/anchor as AutoGallery */}
-      <div style={{
-        position: "absolute", inset: 0,
-        perspective: "1100px",
-        perspectiveOrigin: "50% 46%",
-      }}>
-        <div style={{ position: "absolute", left: "50%", top: "48%" }}>
-          {options.map((opt, i) => {
-            const pos = FLAVOR_VOID_POSITIONS[i];
-            const sel = selected.includes(opt.id);
-            return (
-              // Outer div: static void position (translateX/Y + rotateZ) — never touched by Framer Motion
-              <div
-                key={opt.id}
-                style={{
-                  position: "absolute",
-                  width: pos.w, height: pos.h,
-                  marginLeft: -pos.w / 2,
-                  marginTop:  -pos.h / 2,
-                  transform: `translateX(${pos.x}px) translateY(${pos.y}px) rotateZ(${pos.rotZ}deg)`,
-                }}
-              >
-                {/* Inner motion.button: handles pop-in + float — owns its own transform axis */}
-                <motion.button
-                  onClick={() => onToggle(opt.id)}
-                  initial={{ opacity: 0, scale: 0.7, y: 0 }}
-                  animate={{ opacity: 1, scale: 1, y: [0, -pos.floatAmt, 0] }}
-                  transition={{
-                    opacity: { duration: 0.4, delay: pos.delay },
-                    scale:   { duration: 0.55, delay: pos.delay, ease: [0.34, 1.56, 0.64, 1] },
-                    y:       { duration: pos.dur, repeat: Infinity, ease: "easeInOut", delay: pos.delay + 0.6, repeatType: "mirror" },
-                  }}
-                  whileTap={{ scale: 0.93 }}
-                  style={{
-                    display: "block", width: "100%", height: "100%",
-                    borderRadius: 12, overflow: "hidden",
-                    border: sel ? "2.5px solid rgba(255,255,255,0.92)" : "1.5px solid rgba(255,255,255,0.12)",
-                    boxShadow: sel ? "0 0 0 3px rgba(255,255,255,0.16)" : "none",
-                    background: "none", cursor: "pointer", padding: 0,
-                    transition: "border 0.2s, box-shadow 0.2s",
-                  }}
-                >
-                  <img
-                    src={opt.src} alt={opt.label}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }}
-                  />
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
-                  {sel && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.2 }}
-                      style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
-                        <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </motion.div>
-                  )}
-                  <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
-                    {opt.label}
-                  </p>
-                </motion.button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Confirm button */}
       <AnimatePresence>
         {selected.length > 0 && (
           <motion.button
@@ -472,9 +397,9 @@ function FlavorPicker({ options, selected, onToggle, onConfirm }: {
             style={{
               position: "absolute", bottom: 36, left: 28, right: 28,
               height: 52, borderRadius: 26, backgroundColor: "white",
-              border: "none", cursor: "pointer",
+              border: "none", cursor: "pointer", pointerEvents: "auto",
               fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 18,
-              color: "black", letterSpacing: -0.3, zIndex: 20,
+              color: "black", letterSpacing: -0.3,
             }}
           >
             Build it →
@@ -529,10 +454,12 @@ export function PartyPlannerScreen() {
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
     current.imgState === "cocktail-build" ||
-    current.imgState === "keyword-reveal";
+    current.imgState === "keyword-reveal" ||
+    current.view === "flavor-pick";
 
-  // Cocktail/keyword steps use empty image array — AutoGallery runs as tiles-only void
+  // Cocktail/keyword/flavor steps use empty image array — AutoGallery runs as tiles-only void
   const currentGalleryImages =
+    current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
     current.imgState === "cocktail-build" ? [] :
     current.imgState === "keyword-reveal" ? [] :
@@ -614,6 +541,41 @@ export function PartyPlannerScreen() {
               <p style={{ position: "absolute", fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 13.696, color: "white", lineHeight: 1.4, left: 4.11, top: 56.15, width: 128.285, margin: 0, whiteSpace: "nowrap" }}>Chocolate Shavings</p>
             </div>
           )
+        ),
+      });
+    });
+  }
+
+  // ── Flavor picker TileSlots — fly through the same 3D void as cocktail-build ──
+  if (current.view === "flavor-pick") {
+    FLAVOR_OPTIONS.forEach((opt, i) => {
+      const pos = FLAVOR_VOID_POSITIONS[i];
+      const isSel = selectedFlavors.includes(opt.id);
+      tileSlots.push({
+        id: `flavor-${opt.id}`,
+        x: pos.x, y: pos.y, rotZ: pos.rotZ,
+        w: pos.w, h: pos.h, radius: 12,
+        children: (
+          <button
+            onClick={() => setSelectedFlavors(prev =>
+              prev.includes(opt.id) ? prev.filter(x => x !== opt.id) : [...prev, opt.id]
+            )}
+            style={{ display: "block", width: "100%", height: "100%", border: "none", padding: 0, cursor: "pointer", background: "none", position: "relative" }}
+          >
+            <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
+            {isSel && <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2.5px white" }} />}
+            {isSel && (
+              <div style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            )}
+            <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
+              {opt.label}
+            </p>
+          </button>
         ),
       });
     });
@@ -900,9 +862,7 @@ export function PartyPlannerScreen() {
       <AnimatePresence>
         {current.view === "flavor-pick" && (
           <FlavorPicker
-            options={FLAVOR_OPTIONS}
             selected={selectedFlavors}
-            onToggle={id => setSelectedFlavors(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])}
             onConfirm={handleFlavorConfirm}
           />
         )}

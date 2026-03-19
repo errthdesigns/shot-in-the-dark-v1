@@ -105,10 +105,11 @@ export function RecipeCard() {
 
   const s = (n: number) => stage >= n;
 
-  // ── Layout  (402 × 874 canvas; ~110px bottom reserved for the mic bar)
-  // Row 1 (top):    grapefruit left  | lime right        — h 220, top 5
-  // Row 2 (middle): bottle full-width                    — h 285, top 230
-  // Row 3 (bottom): agave left       | cilantro right    — h 225, top 520
+  // ── Layout  (402 × 874 canvas; ~110px bottom reserved for the mic bar → ~764px usable)
+  // 3 equal rows, 2px gap between them
+  // Row 1 (top):    grapefruit left  | lime right        — h 253, top 0
+  // Row 2 (middle): bottle full-width                    — h 255, top 255
+  // Row 3 (bottom): agave left       | cilantro right    — h 253, top 512
 
   return (
     <div style={{ position: "absolute", inset: 0, backgroundColor: "#0A0A0A", overflow: "hidden" }}>
@@ -117,12 +118,12 @@ export function RecipeCard() {
       <Tile
         visible={s(1)}
         src={imgGrapefruit}
-        style={{ left: 5, top: 5, width: 195, height: 220 }}
+        style={{ left: 0, top: 0, width: 200, height: 253 }}
       />
       <Tile
         visible={s(2)}
         src={imgLime}
-        style={{ left: 205, top: 5, width: 192, height: 220 }}
+        style={{ left: 202, top: 0, width: 200, height: 253 }}
         imgStyle={{ objectPosition: "center 60%" }}
       />
 
@@ -130,46 +131,20 @@ export function RecipeCard() {
       <Tile
         visible={s(0)}
         src={imgTequilaBottle}
-        style={{ left: 5, top: 230, width: 392, height: 285 }}
+        style={{ left: 0, top: 255, width: 402, height: 255 }}
         imgStyle={{ objectPosition: "center 30%" }}
       />
-
-      {/* "The Reposado Paloma" title — fades in with the bottle */}
-      <motion.p
-        style={{
-          position: "absolute",
-          right: 18,
-          top: 242,
-          fontFamily: "Spectral, serif",
-          fontWeight: 700,
-          fontStyle: "italic",
-          fontSize: 34,
-          color: "white",
-          lineHeight: 1.0,
-          margin: 0,
-          textAlign: "right",
-          textShadow: "0 2px 20px rgba(0,0,0,0.95)",
-          letterSpacing: -0.4,
-          pointerEvents: "none",
-          zIndex: 2,
-        }}
-        initial={{ opacity: 0 }}
-        animate={s(0) ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ duration: 1.1, ease: easeOut, delay: 0.5 }}
-      >
-        The<br />Reposado<br />Paloma
-      </motion.p>
 
       {/* ── Row 3: Agave (left) + Cilantro (right) ────────────────────────── */}
       <Tile
         visible={s(3)}
         src={imgAgave}
-        style={{ left: 5, top: 520, width: 195, height: 225 }}
+        style={{ left: 0, top: 512, width: 200, height: 253 }}
       />
       <Tile
         visible={s(4)}
         src={imgCilantro}
-        style={{ left: 205, top: 520, width: 192, height: 225 }}
+        style={{ left: 202, top: 512, width: 200, height: 253 }}
       />
 
     </div>

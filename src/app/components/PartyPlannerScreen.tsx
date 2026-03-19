@@ -528,24 +528,7 @@ export function PartyPlannerScreen() {
         x: pos.x, y: pos.y, rotZ: pos.rotZ,
         w: pos.w, h: pos.h, radius: 12,
         children: (
-          <div style={{ position: "relative", width: "100%", height: "100%" }}>
-            <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            {/* Gradient scrim for label legibility */}
-            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%)" }} />
-            {/* Colored label tag — stays inside tile boundary so void rotation works */}
-            <div style={{
-              position: "absolute", top: 0, right: 0, bottom: 0, width: 30,
-              backgroundColor: item.tagColor,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              overflow: "hidden",
-            }}>
-              <span style={{
-                transform: "rotate(90deg)", display: "block", whiteSpace: "nowrap",
-                fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-                fontSize: 12, color: "white", letterSpacing: 0.3,
-              }}>{item.label}</span>
-            </div>
-          </div>
+          <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         ),
       });
     });

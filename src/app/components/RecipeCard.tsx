@@ -15,11 +15,11 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { speakText, stopSpeech } from "../services/elevenlabs";
 
-import imgGrapefruit    from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
-import imgLime          from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
-import imgAgave         from "figma:asset/fdbf08631a64c7759f8f34e345f24dd602054d7d.png";
-import imgCilantro      from "figma:asset/bebb630f58426b309f126863bf068e9875b1c0c6.png";
-import imgTequilaBottle from "figma:asset/8bef655fab2288c1abb626e35b6d1aae3918d462.png";
+import imgGrapefruit    from "../../assets/Grapefruit.png";
+import imgLime          from "../../assets/Lime.png";
+import imgAgave         from "../../assets/Agave.png";
+import imgCilantro      from "../../assets/Cilantro.png";
+import imgTequilaBottle from "../../assets/Reposado.png";
 
 const easeOut = [0.16, 1, 0.3, 1] as const;
 const delay   = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

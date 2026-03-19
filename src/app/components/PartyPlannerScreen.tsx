@@ -35,8 +35,10 @@ import imgDrinkJ from "figma:asset/33e25f39a0f2e453dfd6bfa208f332f644a2da71.png"
 import imgDrinkK from "figma:asset/5b873ac3b3d33a7fc5b92bb7718e0bacd44d94b3.png";
 import imgDrinkL from "figma:asset/5d7e916fcf23b5e34746902373fb092a3decd6e7.png";
 // Reposado Paloma ingredient images — used in FlavorSuggest (screen 8)
-import imgPalomaGrapefruit from "figma:asset/eb15f2ca8fa38722649c3aca5b016c8a354485e5.png";
-import imgPalomaLime       from "figma:asset/ad1a6d3445d99ccf8e1db21ccbcdb6d9a41581d8.png";
+import imgPalomaGrapefruit from "../../assets/Grapefruit.png";
+import imgPalomaLime       from "../../assets/Lime.png";
+import imgPalomaAgave      from "../../assets/Agave.png";
+import imgPalomaCilantro   from "../../assets/Cilantro.png";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
 
@@ -350,8 +352,8 @@ const PALOMA_VOID_POSITIONS = [
 const PALOMA_ITEMS = [
   { src: imgPalomaGrapefruit, label: "Grapefruit",   tagColor: "#E5311C" },
   { src: imgPalomaLime,       label: "Lime",          tagColor: "#4AB856" },
-  { src: imgDrinkE,           label: "Agave Nectar",  tagColor: "#C8820A" },
-  { src: imgDrinkB,           label: "Cilantro",      tagColor: "#27AE60" },
+  { src: imgPalomaAgave,      label: "Agave Nectar",  tagColor: "#C8820A" },
+  { src: imgPalomaCilantro,   label: "Cilantro",      tagColor: "#27AE60" },
   { src: imgDrinkC,           label: "Club Soda",     tagColor: "#E06020" },
 ] as const;
 

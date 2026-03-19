@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import imgCristalino from "../../assets/bottle-cristalino.gif";
-import imgReposado   from "../../assets/bottle-reposado.gif";
-import imgBlanco     from "../../assets/bottle-blanco.gif";
+import imgCristalino from "../../assets/cristalino_bottle.png";
+import imgReposado   from "../../assets/resposado_bottle.png";
+import imgBlanco     from "../../assets/blanco_bottle.png";
 
 // Only reposado is available in this demo
 const SELECTABLE_ID = "reposado";

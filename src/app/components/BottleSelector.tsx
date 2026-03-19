@@ -106,11 +106,6 @@ export function BottleSelector({ onSelect }: Props) {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
               />
 
-              {/* Gradient overlay */}
-              <div style={{
-                position: "absolute", inset: 0, pointerEvents: "none",
-                background: "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)",
-              }} />
 
 
             </div>

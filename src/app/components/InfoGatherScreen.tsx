@@ -526,10 +526,10 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 1.5 s after slider movement, or 4 s after panel entry.
+  // Auto-advance: budget — 3 s after slider movement, or 8 s after panel entry.
   useEffect(() => {
     if (panel !== "budget") return;
-    const id = setTimeout(() => advanceRef.current(), 4000);
+    const id = setTimeout(() => advanceRef.current(), 8000);
     return () => clearTimeout(id);
   }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -790,11 +790,11 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                     onChange={e => {
                       setBudget(Number(e.target.value));
                       clearTimeout(budgetTimer.current);
-                      budgetTimer.current = setTimeout(() => advanceRef.current(), 1500);
+                      budgetTimer.current = setTimeout(() => advanceRef.current(), 3000);
                     }}
                     style={{ width: "100%", cursor: "pointer" }}
                   />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, width: "100%" }}>
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$20</span>
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$200</span>
                   </div>

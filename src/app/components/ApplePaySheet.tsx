@@ -7,7 +7,7 @@ const SF_PRO  = '"SF Pro", -apple-system, BlinkMacSystemFont, "Helvetica Neue", 
 const SF_TEXT = '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
 const INTER   = '"Inter", sans-serif';
 
-export function ApplePaySheet() {
+export function ApplePaySheet({ total = 82.99 }: { total?: number }) {
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = () => {
@@ -107,7 +107,7 @@ export function ApplePaySheet() {
           Pay Store
         </p>
         <p style={{ position: "absolute", left: 20, top: 30, fontFamily: INTER, fontWeight: 500, fontSize: 30, color: "#000", lineHeight: "normal", letterSpacing: 0.74, margin: 0 }}>
-          $82.99
+          ${total.toFixed(2)}
         </p>
         <div style={{ position: "absolute", right: 20, top: 38 }}>
           <svg width="8" height="14" fill="none" viewBox="0 0 8 14">

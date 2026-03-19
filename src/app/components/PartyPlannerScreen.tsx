@@ -47,31 +47,6 @@ const DRINK_IMAGES_B    = [imgDrinkD, imgDrinkF, imgDrinkI, imgDrinkJ, imgDrinkK
 const DRINK_IMAGES_SPICE = [imgDrinkH, imgDrinkE, imgDrinkB, imgDrinkF, imgDrinkC, imgDrinkG];
 const GATSBY_COMBINED   = [...PARTY_IMAGES, imgDrinkK, imgDrinkI, imgDrinkJ, imgGatsbyA, imgGatsbyB];
 
-// ── Cocktail build — keyword-triggered items for steps 15-17 ─────────────────
-// cx,cy = EXPLICIT center-relative void positions (spread wide across phone)
-// AutoGallery anchor: left:50%=201px, top:48%=420px of phone (402×874)
-interface CocktailItem {
-  id: string;
-  keyword?: string;
-  type: "img" | "orange-bitters" | "chilli" | "chocolate";
-  src?: string;
-  x: number; y: number; w: number; h: number;
-  radius?: number;
-  rotZ: number;
-  cx: number; cy: number;  // explicit wide-spread void positions
-}
-const COCKTAIL_BUILD_ITEMS: CocktailItem[] = [
-  { id: "orange",       type: "img",            src: imgDrinkB, x: 177, y: 261, w: 190, h: 170, radius:  9.131, rotZ: -3.5, cx:   90, cy: -140 },
-  { id: "ob-label",     keyword: "bitter",      type: "orange-bitters",           x: 286, y: 287, w:  65, h:  78,            rotZ:  5.2, cx:  155, cy:  -60 },
-  { id: "circle-dark",  keyword: "bitter",      type: "img",   src: imgDrinkC,    x: 212, y: 364, w: 165, h: 165, radius: 82,    rotZ: -6.0, cx:   80, cy:   30 },
-  { id: "amber",        keyword: "unforgiving", type: "img",   src: imgDrinkE,    x:  92, y: 318, w: 155, h: 190, radius:  9.131, rotZ:  4.0, cx: -105, cy: -100 },
-  { id: "oval",         keyword: "grudge",      type: "img",   src: imgDrinkF,    x:  27, y: 327, w: 110, h: 100, radius: 55,    rotZ: -8.0, cx: -145, cy:   10 },
-  { id: "dark-spice",   keyword: "talking",     type: "img",   src: imgDrinkG,    x: 169, y: 458, w: 220, h: 140, radius:  9.131, rotZ:  3.5, cx:   65, cy:  150 },
-  { id: "choc-label",   keyword: "talking",     type: "chocolate",                x:  99, y: 484, w: 165, h:  90,                  rotZ: -4.0, cx:  -50, cy:  130 },
-  { id: "depth-drink",  keyword: "depth",       type: "img",   src: imgDrinkH,    x:  67, y: 449, w: 155, h: 240, radius:  9.131, rotZ:  6.0, cx: -105, cy:  155 },
-  { id: "chilli-label", keyword: "spice",       type: "chilli",                   x:   9, y: 514, w:  80, h:  50,                  rotZ: -5.5, cx: -150, cy:  110 },
-];
-
 // ── Keyword-triggered ingredient images (step 13) ─────────────────────────────
 interface IngredientDef {
   keyword: string;
@@ -87,10 +62,30 @@ const INGREDIENT_DEFS: IngredientDef[] = [
   { keyword: "raspberry",  src: imgDrinkA,               x:  51, y: 295, w: 127, h: 161, radius: 20,     rotZ: -6.5, cx: -150, cy:  -70  },
 ];
 
+// ── Flavor picker options ─────────────────────────────────────────────────────
+const FLAVOR_PICK_STEP  = 7;
+interface FlavorOption { id: string; label: string; src: string; }
+const FLAVOR_OPTIONS: FlavorOption[] = [
+  { id: "citrus",  label: "Citrus",        src: imgDrinkB },
+  { id: "berries", label: "Berries",       src: imgDrinkA },
+  { id: "fruit",   label: "Stone Fruit",   src: imgIngredientStrawberry },
+  { id: "spice",   label: "Spice",         src: imgDrinkH },
+  { id: "dark",    label: "Dark & Bitter", src: imgDrinkE },
+  { id: "smoke",   label: "Smoke",         src: imgDrinkC },
+];
+const FLAVOR_LINES: Record<string, string> = {
+  citrus:  "Citrus. Sharp. Clean. A good spine.",
+  berries: "Berries. Dark underneath. Good instinct.",
+  fruit:   "Stone fruit. Soft on top, something underneath.",
+  spice:   "Spice. Heat at the back of the throat.",
+  dark:    "Dark and bitter. Bold call.",
+  smoke:   "Smoke. The most dangerous pick on the board.",
+};
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
-type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice" | "cocktail-build";
-type ViewState = "chat" | "bottle-select" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
+type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice";
+type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -110,21 +105,18 @@ const STEPS: Step[] = [
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 2 — confirmation with tiles
   { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 3 — bridge
-  { aiText: "Now. The important part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", autoAdvance: true, autoAdvanceDelay: 1400 },
-  // 4 — tone intro, waits for voice to finish before advancing to bottle prompt
+  // 3 — tone intro, waits for voice to finish before advancing to bottle prompt
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 5 — prompt before bottle selector; mic tap (no userText) advances to bottle-select
-  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 5 — auto-advances after voice (no mic tap needed)
+  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 6 — bottle selector: AI speaks while user chooses; tapping a bottle advances
   { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 7 — dynamic bottle selection response (text set via getAiText); then ask flavour
-  { aiText: "", aiY: 85, userText: "something fruity, maybe orange?", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 8 — cocktail-build: "bitter"/"unforgiving"/"grudge" trigger images word-by-word
-  { aiText: "Orange... yes. Needs something bitter then.\nWarm. A little unforgiving.\nLike a grudge with good manners.", aiY: 85, userText: "yes", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 9 — still building; "depth"/"spice" keywords trigger more ingredient tiles
-  { aiText: "Let me add a little depth...\nsomething that coats the glass...\na whisper of spice to close it out...", aiY: 85, userText: "yes, add a bit of spice", imgState: "cocktail-build", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 10 — recipe card with sequential ingredient spawn
+  // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 8 — flavor picker: AI asks the question aloud while tiles float in the void
+  { aiText: "What calls to you?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
+  // 9 — recipe card: after flavor pick, bartender goes straight to work
+
   { aiText: "", aiY: 85, userText: "looking good - order this for me", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "recipe" },
   // 12 — invite preview: waits for mic tap before revealing invite
   { aiText: "Here's a preview of the invite;\neach one gets their character profile.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
@@ -133,23 +125,23 @@ const STEPS: Step[] = [
   // 14 — email
   { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
   // 15 — shopping cart (mic tap from recipe card advances here)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
+  { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
   // 16 — apple pay sheet (triggered by "Continue with Apple Pay" button)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
+  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 7;
+const BOTTLE_RESPONSE_STEP = 6;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
-  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.\n\nNow — what are you working with flavour-wise?",
-  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.\n\nNow — what are you working with flavour-wise?",
-  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.\n\nNow — what are you working with flavour-wise?",
+  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.",
+  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.",
+  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.",
 };
 
 function resolveAiText(stepIdx: number, bottle: string | null): string {
   if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
-return STEPS[stepIdx].aiText;
+  return STEPS[stepIdx].aiText;
 }
 
 const WAVE_H = [7, 14, 20, 11, 22, 9, 17, 13, 21, 8, 16, 12];
@@ -333,6 +325,50 @@ function DateTileContent() {
   );
 }
 
+// ── Flavor picker void positions (TileSlot x/y = offset from AutoGallery center 50%/48%) ──
+const FLAVOR_VOID_POSITIONS = [
+  { x:  -90, y: -170, rotZ: -5.5, w: 175, h: 155 },
+  { x:  135, y: -130, rotZ:  4.2, w: 150, h: 170 },
+  { x: -155, y:   20, rotZ: -7.0, w: 155, h: 140 },
+  { x:  120, y:   70, rotZ:  5.8, w: 145, h: 155 },
+  { x:  -55, y:  185, rotZ: -3.8, w: 180, h: 148 },
+  { x:  130, y:  205, rotZ:  6.3, w: 148, h: 160 },
+];
+
+// ── Flavor picker — title + confirm button overlay only (images live in AutoGallery tileSlots) ──
+function FlavorPicker({ selected, onConfirm }: {
+  selected: string[];
+  onConfirm: () => void;
+}) {
+  return (
+    <motion.div
+      key="flavor-picker"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      transition={{ duration: 0.55 }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+    >
+      <AnimatePresence>
+        {selected.length > 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.3 }}
+            onClick={onConfirm}
+            style={{
+              position: "absolute", bottom: 36, left: 28, right: 28,
+              height: 52, borderRadius: 26, backgroundColor: "white",
+              border: "none", cursor: "pointer", pointerEvents: "auto",
+              fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 18,
+              color: "black", letterSpacing: -0.3,
+            }}
+          >
+            Build it →
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export function PartyPlannerScreen() {
   const [step, setStep]                 = useState(0);
@@ -343,8 +379,6 @@ export function PartyPlannerScreen() {
   const [isUserTyping, setIsUserTyping] = useState(false);
   const [lastEmail, setLastEmail]       = useState("");
   const [revealedKeywords, setRevealedKeywords] = useState<Set<string>>(new Set());
-  // buildKeywords accumulates across steps 12-14 (does NOT reset between them)
-  const [buildKeywords, setBuildKeywords]       = useState<Set<string>>(new Set());
   // Intro monologue gate — main flow stays frozen until intro completes
   const [introActive, setIntroActive]   = useState(true);
   // Video plays after intro
@@ -359,6 +393,7 @@ export function PartyPlannerScreen() {
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
   const [selectedBottle, setSelectedBottle] = useState<string | null>(null);
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -375,13 +410,13 @@ export function PartyPlannerScreen() {
   const showGallery =
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
-    current.imgState === "cocktail-build" ||
-    current.imgState === "keyword-reveal";
+    current.imgState === "keyword-reveal" ||
+    current.view === "flavor-pick";
 
-  // Cocktail/keyword steps use empty image array — AutoGallery runs as tiles-only void
+  // Keyword/flavor steps use empty image array — AutoGallery runs as tiles-only void
   const currentGalleryImages =
+    current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
-    current.imgState === "cocktail-build" ? [] :
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
 
@@ -435,32 +470,36 @@ export function PartyPlannerScreen() {
     }
   }
 
-  if (current.imgState === "cocktail-build") {
-    COCKTAIL_BUILD_ITEMS.forEach((item) => {
-      if (item.keyword && !buildKeywords.has(item.id)) return;
+  // ── Flavor picker TileSlots ──────────────────────────────────────────────────
+  if (current.view === "flavor-pick") {
+    FLAVOR_OPTIONS.forEach((opt, i) => {
+      const pos = FLAVOR_VOID_POSITIONS[i];
+      const isSel = selectedFlavors.includes(opt.id);
       tileSlots.push({
-        id: `cb-${item.id}`, x: item.cx, y: item.cy, rotZ: item.rotZ,
-        w: item.w, h: item.h, radius: item.radius ?? 4.565,
+        id: `flavor-${opt.id}`,
+        x: pos.x, y: pos.y, rotZ: pos.rotZ,
+        w: pos.w, h: pos.h, radius: 12,
         children: (
-          item.type === "img" ? (
-            <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          ) : item.type === "orange-bitters" ? (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#e5311c", position: "relative" }}>
-              <div style={{ position: "absolute", left: 21.91, top: 5.48, width: 32, height: 57.979, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ transform: "rotate(-90deg)" }}>
-                  <p style={{ fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 16.435, color: "black", lineHeight: 1, margin: 0, width: 57.979 }}>Orange Bitters</p>
-                </div>
+          <button
+            onClick={() => setSelectedFlavors(prev =>
+              prev.includes(opt.id) ? prev.filter(x => x !== opt.id) : [...prev, opt.id]
+            )}
+            style={{ display: "block", width: "100%", height: "100%", border: "none", padding: 0, cursor: "pointer", background: "none", position: "relative" }}
+          >
+            <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.75) 100%)" }} />
+            {isSel && <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 0 2.5px white" }} />}
+            {isSel && (
+              <div style={{ position: "absolute", top: 7, right: 7, width: 18, height: 18, borderRadius: 9, backgroundColor: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="9" height="7" fill="none" viewBox="0 0 10 8">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
               </div>
-            </div>
-          ) : item.type === "chilli" ? (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#fb1a00", position: "relative" }}>
-              <p style={{ position: "absolute", fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 13.696, color: "white", lineHeight: 1.4, left: 3.65, top: 2.28, width: 49.305, margin: 0 }}>Chilli</p>
-            </div>
-          ) : (
-            <div style={{ width: "100%", height: "100%", backgroundColor: "#342614", position: "relative" }}>
-              <p style={{ position: "absolute", fontFamily: "Spectral, serif", fontWeight: 700, fontSize: 13.696, color: "white", lineHeight: 1.4, left: 4.11, top: 56.15, width: 128.285, margin: 0, whiteSpace: "nowrap" }}>Chocolate Shavings</p>
-            </div>
-          )
+            )}
+            <p style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 12, color: "white", margin: 0, letterSpacing: 0.5, fontStyle: "italic" }}>
+              {opt.label}
+            </p>
+          </button>
         ),
       });
     });
@@ -495,13 +534,11 @@ export function PartyPlannerScreen() {
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
     setRevealedKeywords(new Set());
-    // Reset cocktail-build accumulator when leaving the 8-9 window
-    if (step < 8 || step > 9) setBuildKeywords(new Set()); // step 9 is last build step
     setInviteOpen(false);
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
     return clearThink;
-  }, [step, introActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
@@ -608,22 +645,6 @@ export function PartyPlannerScreen() {
     });
   }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 6: cocktail-build keyword reveal (steps 15-17, accumulates) ───────
-  useEffect(() => {
-    if (current.imgState !== "cocktail-build") return;
-    const lower = aiDisplay.toLowerCase();
-    setBuildKeywords((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      for (const item of COCKTAIL_BUILD_ITEMS) {
-        if (item.keyword && !next.has(item.id) && lower.includes(item.keyword)) {
-          next.add(item.id); changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Mic click ───────────────────────────────────────────────────────────────
   const handleMicClick = () => {
     unlockAudio(); // keep AudioContext alive on every tap
@@ -635,6 +656,10 @@ export function PartyPlannerScreen() {
   const handleBottleSelect = (id: string) => {
     setSelectedBottle(id);
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  };
+
+  const handleFlavorConfirm = () => {
+    setStep(s => Math.min(s + 1, STEPS.length - 1));
   };
 
   const handleContinue = () => {
@@ -652,7 +677,7 @@ export function PartyPlannerScreen() {
   const isThinking  = phase === "thinking";
   const isReady     = phase === "ready";
   const isRecording = phase === "recording" || phase === "transcribing";
-  const isPaymentView   = current.view === "cart" || current.view === "apple-pay";
+  const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "flavor-pick";
   const isBottleSelect  = current.view === "bottle-select";
   const showUserBox = !isPaymentView && !isBottleSelect && isRecording && current.view !== "invite";
 
@@ -734,7 +759,17 @@ export function PartyPlannerScreen() {
       {/* ── Apple Pay sheet ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "apple-pay" && (
-          <ApplePaySheet key="apple-pay" />
+          <ApplePaySheet key="apple-pay" total={(partyDetails?.budgetPerHead ?? 60) * (partyDetails?.guests ?? 6)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Flavor picker ───────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {current.view === "flavor-pick" && (
+          <FlavorPicker
+            selected={selectedFlavors}
+            onConfirm={handleFlavorConfirm}
+          />
         )}
       </AnimatePresence>
 

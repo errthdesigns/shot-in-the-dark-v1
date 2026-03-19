@@ -152,9 +152,9 @@ const STEPS: Step[] = [
   // 14 — email
   { aiText: "Good. Now type in their emails and I'll take care of the rest.", aiY: 140, fontVariant: "semibold-italic", userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "email" },
   // 15 — shopping cart (mic tap from recipe card advances here)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
+  { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
   // 16 — apple pay sheet (triggered by "Continue with Apple Pay" button)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
+  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
 ];
 
 // ─── Bottle-selection dynamic text ───────────────────────────────────────────
@@ -610,7 +610,7 @@ export function PartyPlannerScreen() {
     setPhase("thinking");
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
     return clearThink;
-  }, [step, introActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {

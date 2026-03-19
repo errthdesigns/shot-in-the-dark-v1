@@ -26,14 +26,12 @@ const delay   = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 // ── Reusable ingredient tile ──────────────────────────────────────────────────
 function Tile({
-  visible, src, style, imgStyle, measure, label, radius = 8,
+  visible, src, style, imgStyle, radius = 8,
 }: {
   visible: boolean;
   src: string;
   style: React.CSSProperties;
   imgStyle?: React.CSSProperties;
-  measure: string;
-  label: string;
   radius?: number;
 }) {
   return (
@@ -48,26 +46,6 @@ function Tile({
         alt=""
         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", ...imgStyle }}
       />
-      {/* gradient scrim for label legibility */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.72) 100%)",
-        pointerEvents: "none",
-      }} />
-      <div style={{ position: "absolute", left: 12, bottom: 11, pointerEvents: "none" }}>
-        <p style={{
-          fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-          fontSize: 13, color: "white", lineHeight: 1.25, margin: 0,
-        }}>
-          {measure}
-        </p>
-        <p style={{
-          fontFamily: "Spectral, serif", fontWeight: 700, fontStyle: "italic",
-          fontSize: 13, color: "white", lineHeight: 1.25, margin: 0,
-        }}>
-          {label}
-        </p>
-      </div>
     </motion.div>
   );
 }
@@ -140,16 +118,12 @@ export function RecipeCard() {
         visible={s(1)}
         src={imgGrapefruit}
         style={{ left: 5, top: 5, width: 195, height: 220 }}
-        measure="22ml"
-        label="Fresh Grapefruit"
       />
       <Tile
         visible={s(2)}
         src={imgLime}
         style={{ left: 205, top: 5, width: 192, height: 220 }}
         imgStyle={{ objectPosition: "center 60%" }}
-        measure="15ml"
-        label="Fresh Lime"
       />
 
       {/* ── Row 2: Bottle (full width) ────────────────────────────────────── */}
@@ -158,8 +132,6 @@ export function RecipeCard() {
         src={imgTequilaBottle}
         style={{ left: 5, top: 230, width: 392, height: 285 }}
         imgStyle={{ objectPosition: "center 30%" }}
-        measure="45ml"
-        label="Don Julio Reposado"
       />
 
       {/* "The Reposado Paloma" title — fades in with the bottle */}
@@ -193,15 +165,11 @@ export function RecipeCard() {
         visible={s(3)}
         src={imgAgave}
         style={{ left: 5, top: 520, width: 195, height: 225 }}
-        measure="15ml"
-        label="Agave Nectar"
       />
       <Tile
         visible={s(4)}
         src={imgCilantro}
         style={{ left: 205, top: 520, width: 192, height: 225 }}
-        measure="Handful of"
-        label="Fresh Cilantro"
       />
 
     </div>

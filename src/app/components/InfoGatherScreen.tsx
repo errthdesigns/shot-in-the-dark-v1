@@ -54,17 +54,19 @@ function generateDates() {
 const DATES = generateDates();
 
 // ── Panels ─────────────────────────────────────────────────────────────────────
-type Panel = "guests" | "datetime" | "budget";
-const PANELS: Panel[] = ["guests", "datetime", "budget"];
+type Panel = "guests" | "address" | "datetime" | "budget";
+const PANELS: Panel[] = ["guests", "address", "datetime", "budget"];
 
 const QUESTIONS: Record<Panel, string> = {
   guests:   "First up, how many suspects...\nI mean... guests are we expecting??",
+  address:  "Where's the scene being set?\nWhats your address",
   datetime: "Alrighty, what date and time?",
   budget:   "How deep are your pockets?",
 };
 
 const VOICE_LINES: Record<Panel, string> = {
   guests:   "First up, how many suspects... I mean, guests are we expecting?",
+  address:  "Where's the scene being set? Drop your pin on the map.",
   datetime: "Alrighty, what date and time are we talking?",
   budget:   "Last question — how deep are the pockets?",
 };
@@ -447,6 +449,8 @@ function PegmanHolder({
 export function InfoGatherScreen({ playerName, onComplete }: Props) {
   const [panelIdx, setPanelIdx] = useState(0);
   const [guests,   setGuests]   = useState<number | null>(null);
+  const [dropPos,  setDropPos]  = useState<{ x: number; y: number } | null>(null);
+  const [isDead,   setIsDead]   = useState(false);
 const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
@@ -474,6 +478,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   // When pegman is dropped, trigger dead animation after bounce
   const canAdvance =
     panel === "guests"   ? guests !== null :
+    panel === "address"  ? isDead :
     panel === "datetime" ? dateIdx !== null && time !== null :
     true;
 
@@ -504,6 +509,15 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     const id = setTimeout(() => setPanelIdx(p => p + 1), 500);
     return () => clearTimeout(id);
   }, [guests, panel]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When pegman lands, trigger dead animation after bounce, then auto-advance
+  const handleDrop = (x: number, y: number) => {
+    setDropPos({ x, y });
+    setTimeout(() => {
+      setIsDead(true);
+      setTimeout(() => setPanelIdx(p => p + 1), 1200);
+    }, 400);
+  };
 
   // Auto-advance: datetime — both date and time selected
   useEffect(() => {
@@ -614,7 +628,37 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
               </div>
             )}
 
-            {/* ── MAP ── */}
+            {/* ── ADDRESS / MAP ── */}
+            {panel === "address" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <PegmanHolder onDragToMap={handleDrop} dropped={dropPos !== null} />
+                  {!dropPos && (
+                    <p style={{
+                      fontFamily: "Inter, sans-serif", fontSize: 11,
+                      color: "rgba(255,255,255,0.4)", letterSpacing: 1.2,
+                      margin: 0, textTransform: "uppercase", lineHeight: 1.4,
+                    }}>
+                      Drag the figure<br />onto the map
+                    </p>
+                  )}
+                </div>
+                <div id="texas-map-drop">
+                  <TexasMap
+                    playerName={playerName}
+                    onDrop={handleDrop}
+                    dropPos={dropPos}
+                    isDead={isDead}
+                  />
+                </div>
+              </motion.div>
+            )}
+
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

@@ -7,12 +7,12 @@ const SF_PRO  = '"SF Pro", -apple-system, BlinkMacSystemFont, "Helvetica Neue", 
 const SF_TEXT = '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
 const INTER   = '"Inter", sans-serif';
 
-export function ApplePaySheet({ total = 82.99 }: { total?: number }) {
+export function ApplePaySheet({ total = 82.99, date = "the night" }: { total?: number; date?: string }) {
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = () => {
     setConfirmed(true);
-    speakText("You're all set. See you on the 26th of February.");
+    speakText(`You're all set. See you on the ${date}.`);
   };
 
   return (

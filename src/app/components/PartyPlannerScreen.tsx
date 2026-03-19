@@ -8,7 +8,7 @@ import { NameScreen } from "./NameScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { RecipeCard } from "./RecipeCard";
-import { CartScreen } from "./CartScreen";
+import { CartScreen, calcCartTotal } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
 import { BottleSelector } from "./BottleSelector";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
@@ -752,14 +752,18 @@ export function PartyPlannerScreen() {
       {/* ── Cart screen ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "cart" && (
-          <CartScreen key="cart" onApplePay={handleApplePay} budgetPerHead={partyDetails?.budgetPerHead} guests={partyDetails?.guests} />
+          <CartScreen key="cart" onApplePay={handleApplePay} guests={partyDetails?.guests ?? 6} />
         )}
       </AnimatePresence>
 
       {/* ── Apple Pay sheet ──────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "apple-pay" && (
-          <ApplePaySheet key="apple-pay" total={(partyDetails?.budgetPerHead ?? 60) * (partyDetails?.guests ?? 6)} />
+          <ApplePaySheet
+            key="apple-pay"
+            total={calcCartTotal(partyDetails?.guests ?? 6)}
+            date={partyDetails ? `${partyDetails.date} at ${partyDetails.time}` : "the night"}
+          />
         )}
       </AnimatePresence>
 
@@ -1198,6 +1202,7 @@ export function PartyPlannerScreen() {
             <InfoGatherScreen
               playerName={playerName}
               onComplete={(details) => {
+                unlockAudio(); // re-unlock inside the user-gesture chain before async step starts
                 setPartyDetails(details);
                 setInfoGatherActive(false);
                 setStep(3);

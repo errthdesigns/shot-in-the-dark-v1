@@ -112,13 +112,6 @@ export function BottleSelector({ onSelect }: Props) {
                 background: "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)",
               }} />
 
-              {/* Dim overlay for non-selectable bottles */}
-              {!selectable && (
-                <div style={{
-                  position: "absolute", inset: 0, pointerEvents: "none",
-                  background: "rgba(0,0,0,0.45)",
-                }} />
-              )}
 
             </div>
           );

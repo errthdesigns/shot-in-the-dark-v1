@@ -85,10 +85,10 @@ export function ApplePaySheet({ total = 82.99, date = "the night", name = "Riley
           {name}
         </p>
         <p style={{ position: "absolute", left: 62, top: 52, fontFamily: SF_TEXT, fontSize: 14, color: "#000", lineHeight: "19px", margin: 0 }}>
-          Flat 11, 90 Lexham Gardens
+          2301 S Congress Ave
         </p>
         <p style={{ position: "absolute", left: 62, top: 71, fontFamily: SF_TEXT, fontSize: 14, color: "#000", lineHeight: "19px", margin: 0 }}>
-          W8 6JQ, London, UK
+          Austin, TX 78704
         </p>
         {/* Chevron */}
         <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)" }}>

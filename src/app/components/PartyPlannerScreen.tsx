@@ -128,9 +128,12 @@ const STEPS: Step[] = [
 // ─── AI-driven step resolution ────────────────────────────────────────────────
 const AI_STEPS = new Set([3, 4, 5]);
 
-const FALLBACK_VIBE = "Six guests.\n\nI can already see how this room should feel.\n\nI'll set the tone before anyone realises what's happening.";
+const FALLBACK_VIBE    = "Six guests.\n\nI can already see how this room should feel.\n\nI'll set the tone before anyone realises what's happening.";
 const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nPick what draws you.";
-const FALLBACK_BOTTLE = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
+const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
+// Fallbacks for dynamically-generated steps 1 & 2
+const FALLBACK_STEP1   = "Good. And what night are we talking?";
+const FALLBACK_STEP2   = "Got it.\n\nDoes that all sound right to you?";
 
 function resolveAiText(stepIdx: number, aiGeneratedSteps: Record<number, string>): string {
   if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
@@ -444,6 +447,8 @@ export function PartyPlannerScreen() {
   const [aiGeneratedSteps, setAiGeneratedSteps] = useState<Record<number, string>>({});
   const [convHistory, setConvHistory]       = useState<ConvMessage[]>([]);
   const [flavourCallPending, setFlavourCallPending] = useState(false);
+  // Steps that become AI-driven because the user spoke (so they show thinking dots)
+  const [dynamicSteps, setDynamicSteps]     = useState<Set<number>>(new Set());
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -453,6 +458,8 @@ export function PartyPlannerScreen() {
   const voiceTranscriptRef = useRef<string>("");
   // Accumulated user voice inputs from steps 0-2 for LLM context
   const userVoiceInputsRef = useRef<string[]>([]);
+  // Ref mirror of convHistory so Effect 4 can read current value without stale closure
+  const convHistoryRef     = useRef<ConvMessage[]>([]);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -557,6 +564,9 @@ export function PartyPlannerScreen() {
     });
   }
 
+  // Keep convHistoryRef in sync so Effect 4 can read it without stale closure
+  useEffect(() => { convHistoryRef.current = convHistory; }, [convHistory]);
+
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
@@ -567,15 +577,15 @@ export function PartyPlannerScreen() {
     setRevealedKeywords(new Set());
     setInviteOpen(false);
     setPhase("thinking");
-    // AI-driven steps stay in "thinking" until content arrives
-    if (AI_STEPS.has(step) && !aiGeneratedSteps[step]) return;
+    // AI-driven steps (fixed set) OR dynamically-promoted steps wait for content
+    if ((AI_STEPS.has(step) || dynamicSteps.has(step)) && !aiGeneratedSteps[step]) return;
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
     return clearThink;
-  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps (aiGeneratedSteps intentionally omitted)
+  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When AI text arrives for the current step while we're still thinking, start typing
   useEffect(() => {
-    if (!AI_STEPS.has(step)) return;
+    if (!AI_STEPS.has(step) && !dynamicSteps.has(step)) return;
     if (!aiGeneratedSteps[step]) return;
     if (phase !== "thinking") return;
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
@@ -642,13 +652,6 @@ export function PartyPlannerScreen() {
     return () => { cancelled = true; clearType(); clearAdvance(); };
   }, [phase, step, introActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 3: recording → transcribing ─────────────────────────────────────
-  useEffect(() => {
-    if (phase !== "recording") return;
-    advanceTimerRef.current = setTimeout(() => setPhase("transcribing"), 1450);
-    return clearAdvance;
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Effect 4: transcribing → type user text → advance step ─────────────────
   useEffect(() => {
     if (phase !== "transcribing") return;
@@ -659,6 +662,28 @@ export function PartyPlannerScreen() {
       voiceTranscriptRef.current = "";
     }
     const uText = captured || STEPS[step].userText;
+
+    // ── Real voice at steps 0 or 1: fire Claude call for the NEXT step ────────
+    if (captured && step <= 1) {
+      const nextStep  = step + 1;
+      const aiQuestion = resolveAiText(step, aiGeneratedSteps);
+      const prevHistory = convHistoryRef.current;
+      // Build message chain: prior history (or seed with AI's question) + user reply
+      const historyMsgs: ConvMessage[] = [
+        ...(prevHistory.length === 0
+          ? [{ role: "assistant" as const, content: aiQuestion }]
+          : prevHistory),
+        { role: "user" as const, content: captured },
+      ];
+      // Mark next step as dynamic so it shows thinking dots while waiting
+      setDynamicSteps(prev => new Set([...prev, nextStep]));
+      hostChat(historyMsgs).then(raw => {
+        const fallback = nextStep === 1 ? FALLBACK_STEP1 : FALLBACK_STEP2;
+        const text = raw || fallback;
+        setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text }));
+        setConvHistory([...historyMsgs, { role: "assistant", content: text }]);
+      });
+    }
     setUserDisplay(""); setIsUserTyping(true);
     if (!uText) {
       setIsUserTyping(false);
@@ -700,11 +725,15 @@ export function PartyPlannerScreen() {
     if (step !== 3 || aiGeneratedSteps[3]) return;
     if (!partyDetails) return;
     let cancelled = false;
+    // If voice conversation built up history through steps 0-2, continue it;
+    // otherwise seed a fresh context from partyDetails (InfoGather flow)
     const voiceCtx = userVoiceInputsRef.current.length > 0
       ? ` The guest also said: "${userVoiceInputsRef.current.join(" / ")}".`
       : "";
-    const userMsg = `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.${voiceCtx}`;
-    const msgs: ConvMessage[] = [{ role: "user", content: userMsg }];
+    const detailsMsg = `Confirmed details: ${partyDetails.guests} guests, ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}. Now set the vibe.`;
+    const msgs: ConvMessage[] = convHistory.length > 0
+      ? [...convHistory, { role: "user", content: detailsMsg }]
+      : [{ role: "user", content: `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.${voiceCtx}` }];
     hostChat(msgs).then(raw => {
       if (cancelled) return;
       const text = raw || FALLBACK_VIBE;

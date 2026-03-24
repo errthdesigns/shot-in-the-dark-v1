@@ -67,7 +67,7 @@ const QUESTIONS: Record<Panel, string> = {
 const VOICE_LINES: Record<Panel, string> = {
   guests:   "First up, how many suspects... I mean, guests are we expecting?",
   address:  "Where's the scene being set? Drop your pin on the map.",
-  datetime: "Alrighty, what date and time are we talking?",
+  datetime: "Alrighty, what date are we talking?",
   budget:   "Last question — how deep are the pockets?",
 };
 
@@ -284,7 +284,6 @@ function TexasMap({
           alignItems: "center", justifyContent: "center",
           pointerEvents: "none", gap: 8,
         }}>
-          <span style={{ fontSize: 28 }}>📍</span>
           <p style={{
             fontFamily: "Inter, sans-serif", fontSize: 11,
             color: "rgba(255,255,255,0.5)", letterSpacing: 1.5,
@@ -463,8 +462,9 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
   // Speak question on panel entry
   useEffect(() => {
+    stopSpeech();
     const id = setTimeout(() => speakText(VOICE_LINES[panel]), 120);
-    return () => { clearTimeout(id); stopSpeech(); };
+    return () => { clearTimeout(id); };
   }, [panelIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll selected date into view
@@ -526,8 +526,12 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 1.5 s after the user last moves the slider.
-  // No timer on panel entry; mic button is the fallback if they don't touch the slider.
+  // Auto-advance: budget — 3 s after slider movement, or 8 s after panel entry.
+  useEffect(() => {
+    if (panel !== "budget") return;
+    const id = setTimeout(() => advanceRef.current(), 8000);
+    return () => clearTimeout(id);
+  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const PAD = 53;
 
@@ -596,7 +600,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
             {/* ── GUESTS ── */}
             {panel === "guests" && (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: GAP }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: GAP, justifyContent: "center" }}>
                 {GUEST_OPTIONS.map((n, i) => {
                   const sel = guests === n;
                   return (
@@ -634,7 +638,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
-                style={{ display: "flex", flexDirection: "column", gap: 16 }}
+                style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                   <PegmanHolder onDragToMap={handleDrop} dropped={dropPos !== null} />
@@ -661,7 +665,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
             {/* ── DATE / TIME ── */}
             {panel === "datetime" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20, width: "100%" }}>
                 {/* Date strip — large horizontal-scroll cards */}
                 <div
                   ref={scrollRef}
@@ -710,7 +714,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
                 {/* Time tiles — 2-column grid */}
                 <div style={{
-                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10,
+                  display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%",
                 }}>
                   {TIME_OPTIONS.map((t, i) => {
                     const sel = time === t;
@@ -779,18 +783,18 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                   </p>
                 </div>
 
-                <div style={{ width: "100%", marginBottom: 24 }}>
+                <div style={{ width: "100%", marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <input
                     type="range" min={20} max={200} step={10}
                     value={budget}
                     onChange={e => {
                       setBudget(Number(e.target.value));
                       clearTimeout(budgetTimer.current);
-                      budgetTimer.current = setTimeout(() => advanceRef.current(), 1500);
+                      budgetTimer.current = setTimeout(() => advanceRef.current(), 3000);
                     }}
                     style={{ width: "100%", cursor: "pointer" }}
                   />
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, width: "100%" }}>
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$20</span>
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$200</span>
                   </div>
@@ -802,63 +806,6 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         </motion.div>
       </AnimatePresence>
 
-      {/* ── Bottom bar: X · Mic · Grid ── */}
-      {/* X button */}
-      <div style={{
-        position: "absolute", left: 107, top: 778, width: 45, height: 45,
-        borderRadius: 22.5, border: "1px dashed #838383",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", zIndex: 20,
-      }}>
-        <XIcon />
-      </div>
-
-      {/* Ready pulse ring */}
-      <AnimatePresence>
-        {canAdvance && (
-          <motion.div
-            key={`ring-${panel}`}
-            style={{
-              position: "absolute", left: 160, top: 759, width: 82, height: 82,
-              borderRadius: 41, border: "1.5px solid rgba(255,255,255,0.28)",
-              pointerEvents: "none", zIndex: 19,
-            }}
-            animate={{ scale: [1, 1.55], opacity: [0.55, 0] }}
-            transition={{ duration: 1.3, repeat: Infinity, ease: "easeOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mic / advance button */}
-      <motion.button
-        onClick={advance}
-        disabled={!canAdvance}
-        style={{
-          position: "absolute", left: 168, top: 767, width: 66, height: 66,
-          borderRadius: 33, border: "none",
-          cursor: canAdvance ? "pointer" : "default",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "16px 22px", boxSizing: "border-box", zIndex: 20,
-        }}
-        animate={{
-          backgroundColor: canAdvance ? ["#383838", "#444", "#383838"] : "#383838",
-          opacity: canAdvance ? 1 : 0.45,
-        }}
-        transition={canAdvance ? { duration: 2.2, repeat: Infinity } : {}}
-        whileTap={canAdvance ? { scale: 0.88 } : {}}
-      >
-        <MicIcon />
-      </motion.button>
-
-      {/* Grid button */}
-      <div style={{
-        position: "absolute", left: 250, top: 778, width: 45, height: 45,
-        borderRadius: 22.5, border: "1px dashed #838383",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", zIndex: 20,
-      }}>
-        <GridIcon />
-      </div>
 
       {/* Slider styles */}
       <style>{`

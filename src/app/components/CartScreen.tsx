@@ -94,9 +94,6 @@ export function CartScreen({ onApplePay, guests = 6 }: CartScreenProps) {
             <path d="M2 2H62" stroke="#DEDFDC" strokeLinecap="round" strokeWidth="4" />
           </svg>
         </div>
-        <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 16, color: "#000", lineHeight: 1.1, margin: "0 0 10px", textAlign: "center", whiteSpace: "nowrap" }}>
-          xxx.com/cart
-        </p>
         <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 22, color: "#0d0d0d", lineHeight: "32px", margin: "0 0 8px" }}>
           Your Cart
         </p>

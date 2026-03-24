@@ -7,7 +7,7 @@ const SF_PRO  = '"SF Pro", -apple-system, BlinkMacSystemFont, "Helvetica Neue", 
 const SF_TEXT = '"SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
 const INTER   = '"Inter", sans-serif';
 
-export function ApplePaySheet({ total = 82.99, date = "the night" }: { total?: number; date?: string }) {
+export function ApplePaySheet({ total = 82.99, date = "the night", name = "Riley Jones" }: { total?: number; date?: string; name?: string }) {
   const [confirmed, setConfirmed] = useState(false);
 
   const handleConfirm = () => {
@@ -82,13 +82,13 @@ export function ApplePaySheet({ total = 82.99, date = "the night" }: { total?: n
           Ship to
         </p>
         <p style={{ position: "absolute", left: 62, top: 30, fontFamily: SF_TEXT, fontSize: 15, color: "#000", lineHeight: "20px", margin: 0 }}>
-          Riley Jones
+          {name}
         </p>
         <p style={{ position: "absolute", left: 62, top: 52, fontFamily: SF_TEXT, fontSize: 14, color: "#000", lineHeight: "19px", margin: 0 }}>
-          Flat 11, 90 Lexham Gardens
+          2301 S Congress Ave
         </p>
         <p style={{ position: "absolute", left: 62, top: 71, fontFamily: SF_TEXT, fontSize: 14, color: "#000", lineHeight: "19px", margin: 0 }}>
-          W8 6JQ, London, UK
+          Austin, TX 78704
         </p>
         {/* Chevron */}
         <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)" }}>

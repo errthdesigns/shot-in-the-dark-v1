@@ -79,7 +79,7 @@ function toSSML(text: string): string {
     .replace(/!\s*/g,   '!<break time="380ms"/> ')
     .replace(/,\s*/g,   ',<break time="180ms"/> ')
     .replace(/\n+/g,    '<break time="650ms"/>');
-  return `<speak><prosody pitch="-2st" rate="90%">${paced}</prosody></speak>`;
+  return `<speak><prosody pitch="-5st" rate="88%">${paced}</prosody></speak>`;
 }
 
 export async function speakText(text: string): Promise<void> {
@@ -107,6 +107,7 @@ export async function speakText(text: string): Promise<void> {
       if (_gen !== myGen) { resolve(); return; }
       const url = URL.createObjectURL(blob); _blobUrl = url;
       const el = getEl(); el.volume = 1; el.src = url;
+      el.load();
       el.onended = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
       el.onerror = () => { if (_gen !== myGen) return; resolve(); _resolve = null; };
       // Resume AudioContext in case it was suspended (e.g. after a video plays)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
+import { hostChat, extractBottle, stripBottleLine, ConvMessage } from "../services/claude";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
 import { VideoScreen } from "./VideoScreen";
@@ -10,7 +11,6 @@ import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import videoCocktail from "../../assets/Untitled (71).mp4";
 import { CartScreen, calcCartTotal } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
-import { BottleSelector } from "./BottleSelector";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 import imgSafdgdbnf from "figma:asset/46012681f417991ceea5ca1a2a5fe36bc79180ea.png";
 import imgHrsbgfdxVc from "figma:asset/77f7ee28f0d3c625dd310ec0030c47d3e9d0bd4e.png";
@@ -69,7 +69,7 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 ];
 
 // ── Flavor picker options ─────────────────────────────────────────────────────
-const FLAVOR_PICK_STEP  = 7;
+const FLAVOR_PICK_STEP  = 4;
 interface FlavorOption { id: string; label: string; src: string; }
 const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "citrus",  label: "Citrus",        src: imgDrinkB },
@@ -110,34 +110,33 @@ const STEPS: Step[] = [
   // 1 — date/time question
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
   // 2 — confirmation with tiles
-  { aiText: "Six guests. 26th February. Seven in the evening.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 3 — tone intro, waits for voice to finish before advancing to bottle prompt
-  { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 5 — auto-advances after voice (no mic tap needed)
-  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 6 — bottle selector: AI speaks while user chooses; tapping a bottle advances
-  { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 7 — dynamic bottle selection response (text set via resolveAiText); auto-advances
+  { aiText: "Six guests. 26th February.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
+  // 3 — AI vibe (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — cocktail video (Untitled 71); advances automatically when video ends
+  // 4 — AI flavour question (AI-generated, flavor-pick view with void gallery)
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
+  // 5 — AI bottle assignment (AI-generated, speechAdvance)
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 6 — cocktail video; advances automatically when video ends
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
-  // 9 — shopping cart
-  { aiText: "Here's everything you'll need.\n\nWhen you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 10 — apple pay sheet (triggered by "Continue with Apple Pay" button)
-  { aiText: "Sorted. Your mystery night is confirmed.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay" },
+  // 7 — shopping cart
+  { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
+  // 8 — apple pay sheet
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
-// ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 6;
+// ─── AI-driven step resolution ────────────────────────────────────────────────
+const AI_STEPS = new Set([3, 4, 5]);
 
-const BOTTLE_RESPONSES: Record<string, string> = {
-  cristalino: "Cristalino. Ice-cold clarity.\nSmooth edges. No rough ends.",
-  reposado:   "Reposado. Solid choice.\nRich, smooth finish. Barrel-aged patience.",
-  blanco:     "Blanco. Bold and pure.\nThe agave speaks for itself.",
-};
+const FALLBACK_VIBE    = "Six guests.\n\nI can already see how this room should feel.\n\nI'll set the tone before anyone realises what's happening.";
+const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nPick what draws you.";
+const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
+// Fallbacks for dynamically-generated steps 1 & 2
+const FALLBACK_STEP1   = "Good. And what night are we talking?";
+const FALLBACK_STEP2   = "Got it.\n\nDoes that all sound right to you?";
 
-function resolveAiText(stepIdx: number, bottle: string | null): string {
-  if (stepIdx === BOTTLE_RESPONSE_STEP && bottle) return BOTTLE_RESPONSES[bottle] ?? "";
+function resolveAiText(stepIdx: number, aiGeneratedSteps: Record<number, string>): string {
+  if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
   return STEPS[stepIdx].aiText;
 }
 
@@ -177,12 +176,12 @@ function GridIcon() {
 }
 
 // ─── Thinking dots ────────────────────────────────────────────────────────────
-function ThinkingDots({ aiY }: { aiY: number; isEmail: boolean }) {
+function ThinkingDots() {
   return (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
       transition={{ duration: 0.2 }}
-      style={{ position: "absolute", left: "50%", top: aiY, transform: "translateX(-50%)", display: "flex", gap: 9, alignItems: "center" }}
+      style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center" }}
     >
       {[0, 1, 2].map((i) => (
         <motion.div key={i}
@@ -443,12 +442,24 @@ export function PartyPlannerScreen() {
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
-  const [selectedBottle, setSelectedBottle] = useState<string | null>(null);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
+  const [aiBottle, setAiBottle]             = useState<string>("reposado");
+  const [aiGeneratedSteps, setAiGeneratedSteps] = useState<Record<number, string>>({});
+  const [convHistory, setConvHistory]       = useState<ConvMessage[]>([]);
+  const [flavourCallPending, setFlavourCallPending] = useState(false);
+  // Steps that become AI-driven because the user spoke (so they show thinking dots)
+  const [dynamicSteps, setDynamicSteps]     = useState<Set<number>>(new Set());
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Voice capture refs
+  const recognitionRef     = useRef<any>(null);
+  const voiceTranscriptRef = useRef<string>("");
+  // Accumulated user voice inputs from steps 0-2 for LLM context
+  const userVoiceInputsRef = useRef<string[]>([]);
+  // Ref mirror of convHistory so Effect 4 can read current value without stale closure
+  const convHistoryRef     = useRef<ConvMessage[]>([]);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -456,7 +467,6 @@ export function PartyPlannerScreen() {
   const clearAll     = () => { clearType(); clearThink(); clearAdvance(); };
 
   const current     = STEPS[step];
-  const isEmailStep = current.view === "email";
   // Show AutoGallery for photo steps AND void steps (keyword, flavor-pick — tiles only, no photos)
   const showGallery =
     current.imgState === "full" ||
@@ -520,17 +530,15 @@ export function PartyPlannerScreen() {
     }
   }
 
-  // ── Paloma ingredient TileSlots — float through the 3D void ──────────────────
+  // ── Flavor option TileSlots — float through the 3D void ─────────────────────
   if (current.view === "flavor-pick") {
-    PALOMA_ITEMS.forEach((item, i) => {
-      const pos = PALOMA_VOID_POSITIONS[i];
+    FLAVOR_OPTIONS.forEach((opt, i) => {
+      const pos = FLAVOR_VOID_POSITIONS[i];
+      if (!pos) return;
       tileSlots.push({
-        id: `paloma-${item.label}`,
-        x: pos.x, y: pos.y, rotZ: pos.rotZ,
+        id: `fi-${opt.id}`, x: pos.x, y: pos.y, rotZ: pos.rotZ,
         w: pos.w, h: pos.h, radius: 12,
-        children: (
-          <img src={item.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 0%", display: "block" }} />
-        ),
+        children: <img src={opt.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />,
       });
     });
   }
@@ -556,6 +564,9 @@ export function PartyPlannerScreen() {
     });
   }
 
+  // Keep convHistoryRef in sync so Effect 4 can read it without stale closure
+  useEffect(() => { convHistoryRef.current = convHistory; }, [convHistory]);
+
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
@@ -566,15 +577,26 @@ export function PartyPlannerScreen() {
     setRevealedKeywords(new Set());
     setInviteOpen(false);
     setPhase("thinking");
+    // AI-driven steps (fixed set) OR dynamically-promoted steps wait for content
+    if ((AI_STEPS.has(step) || dynamicSteps.has(step)) && !aiGeneratedSteps[step]) return;
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step === 0 ? 500 : 850);
     return clearThink;
   }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When AI text arrives for the current step while we're still thinking, start typing
+  useEffect(() => {
+    if (!AI_STEPS.has(step) && !dynamicSteps.has(step)) return;
+    if (!aiGeneratedSteps[step]) return;
+    if (phase !== "thinking") return;
+    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
+    return clearThink;
+  }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
-    const text  = resolveAiText(step, selectedBottle);
+    const text  = resolveAiText(step, aiGeneratedSteps);
     const s     = STEPS[step];
     const myStep = step;
     let i = 0;
@@ -592,6 +614,7 @@ export function PartyPlannerScreen() {
 
     // Speak the full line concurrently with the typewriter animation (skip if noVoice)
     if (text.trim() && !s.noVoice) {
+      unlockAudio();
       if (s.speechAdvance) {
         speakText(text).then(() => {
           voiceDone = true;
@@ -629,17 +652,38 @@ export function PartyPlannerScreen() {
     return () => { cancelled = true; clearType(); clearAdvance(); };
   }, [phase, step, introActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 3: recording → transcribing ─────────────────────────────────────
-  useEffect(() => {
-    if (phase !== "recording") return;
-    advanceTimerRef.current = setTimeout(() => setPhase("transcribing"), 1450);
-    return clearAdvance;
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Effect 4: transcribing → type user text → advance step ─────────────────
   useEffect(() => {
     if (phase !== "transcribing") return;
-    const uText = STEPS[step].userText;
+    // Use real voice transcript if available, else fall back to scripted text
+    const captured = voiceTranscriptRef.current;
+    if (captured) {
+      userVoiceInputsRef.current = [...userVoiceInputsRef.current, captured];
+      voiceTranscriptRef.current = "";
+    }
+    const uText = captured || STEPS[step].userText;
+
+    // ── Real voice at steps 0 or 1: fire Claude call for the NEXT step ────────
+    if (captured && step <= 1) {
+      const nextStep  = step + 1;
+      const aiQuestion = resolveAiText(step, aiGeneratedSteps);
+      const prevHistory = convHistoryRef.current;
+      // Build message chain: prior history (or seed with AI's question) + user reply
+      const historyMsgs: ConvMessage[] = [
+        ...(prevHistory.length === 0
+          ? [{ role: "assistant" as const, content: aiQuestion }]
+          : prevHistory),
+        { role: "user" as const, content: captured },
+      ];
+      // Mark next step as dynamic so it shows thinking dots while waiting
+      setDynamicSteps(prev => new Set([...prev, nextStep]));
+      hostChat(historyMsgs).then(raw => {
+        const fallback = nextStep === 1 ? FALLBACK_STEP1 : FALLBACK_STEP2;
+        const text = raw || fallback;
+        setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text }));
+        setConvHistory([...historyMsgs, { role: "assistant", content: text }]);
+      });
+    }
     setUserDisplay(""); setIsUserTyping(true);
     if (!uText) {
       setIsUserTyping(false);
@@ -675,17 +719,116 @@ export function PartyPlannerScreen() {
     });
   }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Effect: fetch vibe from Claude when entering step 3 ──────────────────────
+  useEffect(() => {
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
+    if (step !== 3 || aiGeneratedSteps[3]) return;
+    if (!partyDetails) return;
+    let cancelled = false;
+    // If voice conversation built up history through steps 0-2, continue it;
+    // otherwise seed a fresh context from partyDetails (InfoGather flow)
+    const voiceCtx = userVoiceInputsRef.current.length > 0
+      ? ` The guest also said: "${userVoiceInputsRef.current.join(" / ")}".`
+      : "";
+    const detailsMsg = `Confirmed details: ${partyDetails.guests} guests, ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}. Now set the vibe.`;
+    const msgs: ConvMessage[] = convHistory.length > 0
+      ? [...convHistory, { role: "user", content: detailsMsg }]
+      : [{ role: "user", content: `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.${voiceCtx}` }];
+    hostChat(msgs).then(raw => {
+      if (cancelled) return;
+      const text = raw || FALLBACK_VIBE;
+      setAiGeneratedSteps(prev => ({ ...prev, 3: text }));
+      setConvHistory([...msgs, { role: "assistant", content: text }]);
+    });
+    return () => { cancelled = true; };
+  }, [step, partyDetails, aiGeneratedSteps, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Effect: fetch flavour question from Claude when entering step 4 ──────────
+  useEffect(() => {
+    if (step !== 4 || aiGeneratedSteps[4]) return;
+    if (convHistory.length === 0) return;
+    let cancelled = false;
+    const msgs: ConvMessage[] = [
+      ...convHistory,
+      { role: "user", content: "What should we think about for the drinks?" },
+    ];
+    hostChat(msgs).then(raw => {
+      if (cancelled) return;
+      const text = raw || FALLBACK_FLAVOUR;
+      setAiGeneratedSteps(prev => ({ ...prev, 4: text }));
+      setConvHistory([...msgs, { role: "assistant", content: text }]);
+    });
+    return () => { cancelled = true; };
+  }, [step, aiGeneratedSteps, convHistory]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Mic click ───────────────────────────────────────────────────────────────
   const handleMicClick = () => {
-    unlockAudio(); // keep AudioContext alive on every tap
+    unlockAudio();
     if (phase !== "ready") return;
-    if (!STEPS[step].userText) { setStep((st) => Math.min(st + 1, STEPS.length - 1)); return; }
+    if (current.view === "flavor-pick") return; // flavor-pick uses its own confirm button
+
+    // Try Web Speech API (Chromium + Safari 15+)
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      // No speech API — advance immediately with scripted fallback
+      setStep((st) => Math.min(st + 1, STEPS.length - 1));
+      return;
+    }
+
+    // Abort any lingering recognition session
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+    }
+
+    voiceTranscriptRef.current = "";
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
     setPhase("recording");
+    stopSpeech(); // stop any playing TTS while the user speaks
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript ?? "";
+      voiceTranscriptRef.current = transcript;
+    };
+
+    recognition.onerror = () => {
+      // Fall through to onend — voiceTranscriptRef stays empty → scripted fallback
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      // Transition to transcribing whether or not we got a result
+      setPhase((prev) => (prev === "recording" ? "transcribing" : prev));
+    };
+
+    recognition.start();
   };
 
-  const handleBottleSelect = (id: string) => {
-    setSelectedBottle(id);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  const handleFlavorConfirm = () => {
+    if (selectedFlavors.length === 0 || flavourCallPending) return;
+    setFlavourCallPending(true);
+    const flavorStr = selectedFlavors.join(", ");
+    const userMsg = `I'm drawn to: ${flavorStr}. What tequila fits?`;
+    const msgs: ConvMessage[] = [
+      ...convHistory,
+      { role: "user", content: userMsg },
+    ];
+    hostChat(msgs).then(raw => {
+      const bottle = extractBottle(raw || "reposado");
+      const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
+      setAiBottle(bottle);
+      setAiGeneratedSteps(prev => ({ ...prev, 5: display }));
+      setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
+      setFlavourCallPending(false);
+      setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+    });
   };
 
   const handleCocktailComplete = () => {
@@ -705,14 +848,11 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking  = phase === "thinking";
-  const isReady     = phase === "ready";
-  const isRecording = phase === "recording" || phase === "transcribing";
   const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
-  const isBottleSelect  = current.view === "bottle-select";
-  const showUserBox = !isPaymentView && !isBottleSelect && isRecording;
+  const isFlavorPick    = current.view === "flavor-pick";
 
   return (
-    <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
+    <div onClick={handleMicClick} style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
@@ -779,21 +919,56 @@ export function PartyPlannerScreen() {
           <ApplePaySheet
             key="apple-pay"
             total={calcCartTotal(partyDetails?.guests ?? 6)}
-            date={partyDetails ? `${partyDetails.date} at ${partyDetails.time}` : "the night"}
+            date={partyDetails?.date ?? "the night"}
+            name={playerName || "Riley Jones"}
           />
         )}
       </AnimatePresence>
 
-      {/* ── Bottle selector ──────────────────────────────────────────────────────── */}
+      {/* ── Flavor picker (step 4) ────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isBottleSelect && (
+        {current.view === "flavor-pick" && (
           <motion.div
-            key="bottle-select"
+            key="flavor-ui"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0, zIndex: 50 }}
+            transition={{ duration: 0.5 }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 56, zIndex: 30, pointerEvents: "none" }}
           >
-            <BottleSelector onSelect={handleBottleSelect} />
+            {/* Flavor option buttons */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", padding: "0 20px", marginBottom: 12, pointerEvents: "auto" }}>
+              {FLAVOR_OPTIONS.map(opt => {
+                const sel = selectedFlavors.includes(opt.id);
+                return (
+                  <motion.button
+                    key={opt.id}
+                    onClick={() => setSelectedFlavors(prev =>
+                      prev.includes(opt.id) ? prev.filter(id => id !== opt.id) : [...prev, opt.id]
+                    )}
+                    whileTap={{ scale: 0.93 }}
+                    animate={{ backgroundColor: sel ? "white" : "rgba(255,255,255,0.12)", color: sel ? "#000" : "rgba(255,255,255,0.85)" }}
+                    transition={{ duration: 0.18 }}
+                    style={{ padding: "9px 18px", borderRadius: 22, border: "1px solid rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "Spectral, serif", fontSize: 14, letterSpacing: 0.2 }}
+                  >
+                    {opt.label}
+                  </motion.button>
+                );
+              })}
+            </div>
+            {/* Confirm button */}
+            <AnimatePresence>
+              {selectedFlavors.length > 0 && (
+                <motion.button
+                  key="build-it"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.28 }}
+                  onClick={handleFlavorConfirm}
+                  disabled={flavourCallPending}
+                  style={{ display: "block", margin: "0 auto", padding: "13px 36px", borderRadius: 26, backgroundColor: flavourCallPending ? "rgba(255,255,255,0.4)" : "white", border: "none", cursor: flavourCallPending ? "default" : "pointer", fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 16, color: "#000", letterSpacing: -0.2, pointerEvents: "auto" }}
+                >
+                  {flavourCallPending ? "…" : "Build it →"}
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
@@ -805,12 +980,12 @@ export function PartyPlannerScreen() {
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
       <AnimatePresence>
-        {isThinking && !isBottleSelect && <ThinkingDots key={`dots-${step}`} aiY={current.aiY} isEmail={isEmailStep} />}
+        {isThinking && !isFlavorPick && <ThinkingDots key={`dots-${step}`} />}
       </AnimatePresence>
 
       {/* ── Ambient glow while AI types ──────────────────────────────────────── */}
       <AnimatePresence>
-        {phase === "ai_typing" && !isBottleSelect && (
+        {phase === "ai_typing" && !isFlavorPick && (
           <motion.div key="glow" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
             style={{ position: "absolute", left: "50%", top: current.aiY, transform: "translate(-50%,-50%)", width: 320, height: 120, borderRadius: "50%", background: "radial-gradient(ellipse, rgba(255,255,255,0.045) 0%, transparent 70%)", pointerEvents: "none" }}
           />
@@ -819,12 +994,10 @@ export function PartyPlannerScreen() {
 
       {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isBottleSelect && (
+        {!isThinking && aiDisplay && !isFlavorPick && !isPaymentView && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            style={isEmailStep
-              ? { position: "absolute", left: 25, top: current.aiY, width: 343, textAlign: "center" }
-              : { position: "absolute", left: "50%", top: current.aiY, transform: "translateX(-50%)", width: 352, textAlign: "center" }}
+            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 352, textAlign: "center" }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontWeight: current.fontVariant === "semibold-italic" ? 600 : 400, fontStyle: current.fontVariant === "semibold-italic" ? "italic" : "normal", fontSize: 24, color: "white", lineHeight: 1.15, letterSpacing: current.fontVariant === "semibold-italic" ? -0.48 : 0, margin: 0, whiteSpace: "pre-wrap" }}>
               <BlurText text={aiDisplay} isTyping={isAiTyping} />
@@ -832,84 +1005,6 @@ export function PartyPlannerScreen() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── User voice box ───────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showUserBox && (
-          <motion.div key="user-box"
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8, transition: { duration: 0.22 } }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
-            style={{ position: "absolute", left: 20, top: 688, width: 352, minHeight: 52, padding: "14px 18px", borderRadius: 10, backgroundColor: "rgba(255,255,255,0.07)", border: `1px solid ${phase === "recording" ? "#8B2E2E" : "#838383"}`, boxSizing: "border-box", transition: "border-color 0.3s" }}
-          >
-            {phase === "recording" ? <Waveform /> : (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <AnimatePresence>
-                  {isUserTyping && (
-                    <motion.div key="dot" initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }} transition={{ duration: 0.2 }}
-                      style={{ flexShrink: 0, width: 6, height: 6, borderRadius: "50%", backgroundColor: "#e5311c", animation: "voicePulse 0.65s ease-in-out infinite" }}
-                    />
-                  )}
-                </AnimatePresence>
-                <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 16, color: "white", textAlign: "center", lineHeight: 1.5, margin: 0, flex: 1 }}>
-                  <UserText text={userDisplay} />{isUserTyping && <Cursor />}
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── LISTENING badge ──────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === "recording" && (
-          <motion.div key="listening"
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.25 }}
-            style={{ position: "absolute", left: "50%", top: 750, transform: "translate(-50%, -50%)", display: "flex", alignItems: "center", gap: 7, pointerEvents: "none" }}
-          >
-            <motion.div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#8B2E2E" }}
-              animate={{ scale: [1, 1.7, 1], opacity: [1, 0.4, 1] }} transition={{ duration: 0.72, repeat: Infinity }} />
-            <span style={{ fontFamily: "Inter, sans-serif", fontSize: 10, color: "rgba(255,255,255,0.45)", letterSpacing: 2.5 }}>LISTENING</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Ready-pulse ring (hidden on payment views) ───────────────────────── */}
-      <AnimatePresence>
-        {isReady && !isPaymentView && !isBottleSelect && (
-          <motion.div key="ring"
-            style={{ position: "absolute", left: 160, top: 759, width: 82, height: 82, borderRadius: 41, border: "1.5px solid rgba(255,255,255,0.28)", pointerEvents: "none" }}
-            animate={{ scale: [1, 1.55], opacity: [0.55, 0] }}
-            transition={{ duration: 1.3, repeat: Infinity, ease: "easeOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Recording pulse ring ─────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {phase === "recording" && (
-          <motion.div key="rec-ring"
-            style={{ position: "absolute", left: 157, top: 756, width: 88, height: 88, borderRadius: 44, border: "2px solid #8B2E2E", pointerEvents: "none" }}
-            animate={{ scale: [1, 1.65, 1], opacity: [0.85, 0, 0.85] }}
-            transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* ── Mic button (hidden on payment + bottle-select views) ── */}
-      <motion.button
-        onClick={handleMicClick} disabled={!isReady || isPaymentView || isBottleSelect}
-        style={{ position: "absolute", left: 168, top: 767, width: 66, height: 66, borderRadius: 33, border: "none", cursor: isReady && !isPaymentView && !isBottleSelect ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px 22px", boxSizing: "border-box", zIndex: 10, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}
-        animate={{ backgroundColor: phase === "recording" ? "#8B2E2E" : isReady ? ["#383838", "#444", "#383838"] : "#383838", scale: phase === "recording" ? [1, 1.06, 1] : 1 }}
-        transition={phase === "recording" ? { scale: { duration: 0.9, repeat: Infinity }, backgroundColor: { duration: 0.3 } } : isReady ? { duration: 2.2, repeat: Infinity } : {}}
-        whileHover={isReady ? { scale: 1.08 } : {}} whileTap={isReady ? { scale: 0.88 } : {}}
-      >
-        <MicIcon />
-      </motion.button>
-
-      {/* X + Grid buttons — hidden on payment + bottle-select views */}
-      <div style={{ position: "absolute", left: 107, top: 778, opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><XIcon /></div>
-      <div style={{ position: "absolute", left: 250, top: 778, width: 45, height: 45, borderRadius: 22.5, border: "1px dashed #838383", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", opacity: isPaymentView || isBottleSelect ? 0 : 1, pointerEvents: isPaymentView || isBottleSelect ? "none" : undefined }}><GridIcon /></div>
 
       {/* ── Step indicator pills ─────────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
-import imgCristalino from "../../assets/bottle-cristalino.gif";
-import imgReposado   from "../../assets/bottle-reposado.gif";
-import imgBlanco     from "../../assets/bottle-blanco.gif";
+import imgCristalino from "../../assets/cristalino_bottle.png";
+import imgReposado   from "../../assets/resposado_bottle.png";
+import imgBlanco     from "../../assets/blanco_bottle.png";
 
 // Only reposado is available in this demo
 const SELECTABLE_ID = "reposado";
@@ -10,8 +10,6 @@ export interface BottleData {
   id: string;
   name: string;
   brand: string;
-  blurb: string;
-  darkText: boolean;
 }
 
 export const BOTTLES: BottleData[] = [
@@ -19,22 +17,16 @@ export const BOTTLES: BottleData[] = [
     id:       "cristalino",
     name:     "70 Cristalino",
     brand:    "Don Julio",
-    blurb:    "Aged 18 months, then filtered to crystal clarity.\nSmooth, precise, and ruthlessly elegant.\n\nA night of cold-blooded sophistication — think modern noir, glass towers, and alibis that are almost too clean.",
-    darkText: true,
   },
   {
     id:       "reposado",
     name:     "Reposado",
     brand:    "Don Julio",
-    blurb:    "Two months in American white oak.\nRich, warm, and unhurried — smoke beneath the surface.\n\nA night soaked in shadows and candlelight — classic murder mystery, old money, and secrets that don't stay buried.",
-    darkText: false,
   },
   {
     id:       "blanco",
     name:     "Blanco",
     brand:    "Don Julio",
-    blurb:    "Pure blue agave. Unaged. Uncut.\nBold and dangerously alive — nothing to hide behind.\n\nA night with no rules — roaring 20s chaos, speakeasy energy, and a killer who'd do it again.",
-    darkText: false,
   },
 ];
 
@@ -114,65 +106,8 @@ export function BottleSelector({ onSelect }: Props) {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
               />
 
-              {/* Gradient overlay */}
-              <div style={{
-                position: "absolute", inset: 0, pointerEvents: "none",
-                background: bottle.darkText
-                  ? "linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%)"
-                  : "linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0) 40%, rgba(0,0,0,0.72) 100%)",
-              }} />
 
-              {/* Dim overlay for non-selectable bottles */}
-              {!selectable && (
-                <div style={{
-                  position: "absolute", inset: 0, pointerEvents: "none",
-                  background: "rgba(0,0,0,0.45)",
-                }} />
-              )}
 
-              {/* Bottle name + brand */}
-              <div style={{ position: "absolute", top: 64, left: 28, pointerEvents: "none" }}>
-                <p style={{
-                  fontFamily: "Spectral, serif",
-                  fontWeight: 700,
-                  fontSize: 44,
-                  color: bottle.darkText ? "#0c0c0c" : "white",
-                  lineHeight: 1.0,
-                  margin: 0,
-                  letterSpacing: -1.4,
-                  opacity: selectable ? 1 : 0.5,
-                }}>
-                  {bottle.name}
-                </p>
-                <p style={{
-                  fontFamily: "Inter, sans-serif",
-                  fontWeight: 400,
-                  fontStyle: "italic",
-                  fontSize: 13,
-                  color: bottle.darkText ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.65)",
-                  margin: "7px 0 0",
-                  letterSpacing: 0.6,
-                  opacity: selectable ? 1 : 0.5,
-                }}>
-                  {bottle.brand}
-                </p>
-              </div>
-
-              {/* Blurb — bottom of card */}
-              <div style={{ position: "absolute", bottom: 108, left: 28, right: 28, pointerEvents: "none" }}>
-                <p style={{
-                  fontFamily: "Spectral, serif",
-                  fontWeight: 400,
-                  fontStyle: "italic",
-                  fontSize: 16,
-                  color: selectable ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
-                  lineHeight: 1.55,
-                  margin: 0,
-                  whiteSpace: "pre-wrap",
-                }}>
-                  {bottle.blurb}
-                </p>
-              </div>
             </div>
           );
         })}

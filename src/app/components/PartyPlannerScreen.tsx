@@ -448,6 +448,11 @@ export function PartyPlannerScreen() {
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Voice capture refs
+  const recognitionRef     = useRef<any>(null);
+  const voiceTranscriptRef = useRef<string>("");
+  // Accumulated user voice inputs from steps 0-2 for LLM context
+  const userVoiceInputsRef = useRef<string[]>([]);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -647,7 +652,13 @@ export function PartyPlannerScreen() {
   // ── Effect 4: transcribing → type user text → advance step ─────────────────
   useEffect(() => {
     if (phase !== "transcribing") return;
-    const uText = STEPS[step].userText;
+    // Use real voice transcript if available, else fall back to scripted text
+    const captured = voiceTranscriptRef.current;
+    if (captured) {
+      userVoiceInputsRef.current = [...userVoiceInputsRef.current, captured];
+      voiceTranscriptRef.current = "";
+    }
+    const uText = captured || STEPS[step].userText;
     setUserDisplay(""); setIsUserTyping(true);
     if (!uText) {
       setIsUserTyping(false);
@@ -689,7 +700,10 @@ export function PartyPlannerScreen() {
     if (step !== 3 || aiGeneratedSteps[3]) return;
     if (!partyDetails) return;
     let cancelled = false;
-    const userMsg = `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.`;
+    const voiceCtx = userVoiceInputsRef.current.length > 0
+      ? ` The guest also said: "${userVoiceInputsRef.current.join(" / ")}".`
+      : "";
+    const userMsg = `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.${voiceCtx}`;
     const msgs: ConvMessage[] = [{ role: "user", content: userMsg }];
     hostChat(msgs).then(raw => {
       if (cancelled) return;
@@ -723,7 +737,49 @@ export function PartyPlannerScreen() {
     unlockAudio();
     if (phase !== "ready") return;
     if (current.view === "flavor-pick") return; // flavor-pick uses its own confirm button
-    setStep((st) => Math.min(st + 1, STEPS.length - 1));
+
+    // Try Web Speech API (Chromium + Safari 15+)
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      // No speech API — advance immediately with scripted fallback
+      setStep((st) => Math.min(st + 1, STEPS.length - 1));
+      return;
+    }
+
+    // Abort any lingering recognition session
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+    }
+
+    voiceTranscriptRef.current = "";
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setPhase("recording");
+    stopSpeech(); // stop any playing TTS while the user speaks
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results?.[0]?.[0]?.transcript ?? "";
+      voiceTranscriptRef.current = transcript;
+    };
+
+    recognition.onerror = () => {
+      // Fall through to onend — voiceTranscriptRef stays empty → scripted fallback
+    };
+
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      // Transition to transcribing whether or not we got a result
+      setPhase((prev) => (prev === "recording" ? "transcribing" : prev));
+    };
+
+    recognition.start();
   };
 
   const handleFlavorConfirm = () => {

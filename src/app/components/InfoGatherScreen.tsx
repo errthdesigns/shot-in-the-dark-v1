@@ -454,7 +454,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
   const scrollRef      = useRef<HTMLDivElement>(null);
-  const budgetTimer    = useRef<ReturnType<typeof setTimeout>>();
+
   const advanceRef     = useRef<() => void>(() => {});
   const [micActive, setMicActive] = useState(false);
   const [heardText, setHeardText] = useState("");   // live transcript display
@@ -533,7 +533,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
       const t = parseTimeVoice(text); if (t) setTime(t);
       const di = parseDateVoice(text); if (di !== null) setDateIdx(di);
     }
-    if (panel === "budget") { const b = parseBudgetVoice(text); if (b !== null) { setBudget(b); safeAdvance(); } }
+    if (panel === "budget") { const b = parseBudgetVoice(text); if (b !== null) setBudget(b); } // no auto-advance — user taps confirm
     setTypeOpen(false);
     setTypeValue("");
   };
@@ -579,7 +579,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         }
         if (panel === "budget") {
           const b = parseBudgetVoice(final);
-          if (b !== null) { setBudget(b); safeAdvance(); }
+          if (b !== null) setBudget(b); // no auto-advance — user taps confirm
         }
       }
     };
@@ -667,12 +667,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 3 s after slider movement, or 8 s after panel entry.
-  useEffect(() => {
-    if (panel !== "budget") return;
-    const id = setTimeout(() => advanceRef.current(), 8000);
-    return () => clearTimeout(id);
-  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Budget: no auto-advance — user must tap confirm button
 
   const PAD = 53;
 
@@ -936,15 +931,11 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                   </p>
                 </div>
 
-                <div style={{ width: "100%", marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ width: "100%", marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <input
                     type="range" min={20} max={200} step={10}
                     value={budget}
-                    onChange={e => {
-                      setBudget(Number(e.target.value));
-                      clearTimeout(budgetTimer.current);
-                      budgetTimer.current = setTimeout(() => advanceRef.current(), 3000);
-                    }}
+                    onChange={e => setBudget(Number(e.target.value))}
                     style={{ width: "100%", cursor: "pointer" }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, width: "100%" }}>
@@ -952,6 +943,20 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$200</span>
                   </div>
                 </div>
+
+                {/* Explicit confirm button */}
+                <motion.button
+                  onClick={() => advanceRef.current()}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    marginTop: 8, padding: "14px 40px", borderRadius: 40,
+                    border: "1px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.1)",
+                    color: "white", fontFamily: "Spectral, serif", fontSize: 16,
+                    fontStyle: "italic", letterSpacing: 0.3, cursor: "pointer",
+                  }}
+                >
+                  that's the one →
+                </motion.button>
               </motion.div>
             )}
 

@@ -462,6 +462,8 @@ export function PartyPlannerScreen() {
   const userVoiceInputsRef = useRef<string[]>([]);
   // Ref mirror of convHistory so Effect 4 can read current value without stale closure
   const convHistoryRef     = useRef<ConvMessage[]>([]);
+  // Prevent step 5 Claude fetch from being cancelled by unrelated state changes
+  const flavorFetchDoneRef = useRef(false);
   // Ref mirror of flavorTurns so Effect 4 closure never goes stale
   const flavorTurnsRef     = useRef(0);
   // Ref mirror of freeChatTurns so Effect 4 closure never goes stale
@@ -538,19 +540,8 @@ export function PartyPlannerScreen() {
     }
   }
 
-  // ── Flavor option TileSlots — float through the 3D void ─────────────────────
-  if (current.view === "flavor-pick") {
-    FLAVOR_OPTIONS.forEach((opt, i) => {
-      const pos = FLAVOR_VOID_POSITIONS[i];
-      if (!pos) return;
-      tileSlots.push({
-        id: `fi-${opt.id}`, x: pos.x, y: pos.y, rotZ: pos.rotZ,
-        w: pos.w, h: pos.h, radius: 12,
-        children: <img src={opt.src} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />,
-      });
-    });
-  }
-
+  // ── Flavor images are shown as image planes in AutoGallery (not tile slots) ──
+  // Tile slots are only used for guests/time/date/ingredients/gatsby
   if (current.imgState === "gatsby-reveal") {
     const gatsbyItems = [
       { id: "gatsby-img-0", src: imgDrinkK,  x:  55, y: -120, rotZ: -3.5, w: 154, h: 130, radius: 14 },
@@ -601,12 +592,13 @@ export function PartyPlannerScreen() {
     return clearThink;
   }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When AI text arrives for the current step while we're still thinking, start typing
+  // When AI text arrives for the current step, start typing
+  // Handles both "thinking" (normal path) and "ready" (text arrived late, after phase moved on)
   useEffect(() => {
     if (!AI_STEPS.has(step) && !dynamicSteps.has(step)) return;
     if (!aiGeneratedSteps[step]) return;
-    if (phase !== "thinking") return;
-    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
+    if (phase !== "thinking" && phase !== "ready") return;
+    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), phase === "ready" ? 200 : 600);
     return clearThink;
   }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -834,14 +826,20 @@ export function PartyPlannerScreen() {
     return () => { cancelled = true; };
   }, [step, partyDetails, aiGeneratedSteps, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Reset fetch flag when leaving step 5
+  useEffect(() => { if (step !== 5) flavorFetchDoneRef.current = false; }, [step]);
+
   // ── Effect: fetch flavour question from Claude when entering step 5 ──────────
+  // Only depends on [step, convHistory] — aiGeneratedSteps deliberately excluded
+  // to prevent unrelated step completions from cancelling this in-flight call.
   useEffect(() => {
-    if (step !== 5 || aiGeneratedSteps[5]) return;
-    if (convHistory.length === 0) return;
+    if (step !== 5 || flavorFetchDoneRef.current || aiGeneratedSteps[5]) return;
+    if (convHistoryRef.current.length === 0) return;
+    flavorFetchDoneRef.current = true;
     let cancelled = false;
     const msgs: ConvMessage[] = [
-      ...convHistory,
-      { role: "user", content: "What should we think about for the drinks?" },
+      ...convHistoryRef.current,
+      { role: "user", content: "[System: ask what flavours appeal to them. Tell them in character they can tap a floating image they like OR just say what draws them. 2-3 lines max, keep it dark and intriguing.]" },
     ];
     hostChat(msgs).then(raw => {
       if (cancelled) return;
@@ -850,7 +848,7 @@ export function PartyPlannerScreen() {
       setConvHistory([...msgs, { role: "assistant", content: text }]);
     });
     return () => { cancelled = true; };
-  }, [step, aiGeneratedSteps, convHistory]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, convHistory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mic click ───────────────────────────────────────────────────────────────
   const handleMicClick = () => {
@@ -961,7 +959,7 @@ export function PartyPlannerScreen() {
             <AutoGallery
               images={showGallery ? (flavorGalleryImages.length > 0 ? flavorGalleryImages : currentGalleryImages) : []}
               speed={1.8}
-              visibleCount={current.view === "flavor-pick" ? 3 : 6}
+              visibleCount={6}
               tileSlots={tileSlots}
               onImageTap={current.view === "flavor-pick" && phase === "ready" ? (imgIdx) => {
                 const opt = FLAVOR_OPTIONS[imgIdx % FLAVOR_OPTIONS.length];

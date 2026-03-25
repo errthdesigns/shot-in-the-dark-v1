@@ -8,7 +8,6 @@ import { VideoScreen } from "./VideoScreen";
 import { NameScreen } from "./NameScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
-import videoCocktail from "../../assets/Untitled (71).mp4";
 import { CartScreen, calcCartTotal } from "./CartScreen";
 import { ApplePaySheet } from "./ApplePaySheet";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
@@ -69,7 +68,7 @@ const INGREDIENT_DEFS: IngredientDef[] = [
 ];
 
 // ── Flavor picker options ─────────────────────────────────────────────────────
-const FLAVOR_PICK_STEP  = 4;
+const FLAVOR_PICK_STEP  = 5;
 interface FlavorOption { id: string; label: string; src: string; }
 const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "citrus",  label: "Citrus",        src: imgDrinkB },
@@ -83,7 +82,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
 type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice";
-type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "cocktail" | "recipe" | "cart" | "apple-pay";
+type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "recipe" | "cart" | "apple-pay";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -99,29 +98,31 @@ interface Step {
 const STEPS: Step[] = [
   // 0 — guest question
   { aiText: `How many guests are we expecting?\n\nAnd don't say "a few." I like specifics.`, aiY: 85, userText: "ok, 6 people", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 1 — date/time question
+  // 1 — date/time question (dynamic)
   { aiText: "Good. And what night are we talking?", aiY: 85, userText: "7pm on the 26th feb", imgState: "full", guestCount: 6, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 2 — confirmation with tiles
-  { aiText: "Six guests. 26th February.\n\nDoes that all sound about right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
-  // 3 — AI vibe (AI-generated, speechAdvance)
+  // 2 — confirmation (dynamic)
+  { aiText: "Got it.\n\nDoes that all sound right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
+  // 3 — FREE CHAT — open conversation (multi-turn)
+  { aiText: "Good.\n\nAnything else I should know about the night?", aiY: 85, userText: "I just bought new cowboy boots I want to wear!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 4 — AI vibe reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 4 — AI flavour question (AI-generated, flavor-pick view with void gallery)
+  // 5 — AI flavour question (AI-generated, flavor-pick view with void gallery)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
-  // 5 — AI bottle assignment (AI-generated, speechAdvance)
+  // 6 — AI bottle assignment (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 6 — cocktail video; advances automatically when video ends
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
-  // 7 — shopping cart
+  // 7 — void gallery reveal
+  { aiText: "Take it in.\n\nWhen you're ready… say the word.", aiY: 85, userText: "Let's go.", imgState: "full", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 8 — shopping cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 8 — apple pay sheet
+  // 9 — apple pay sheet
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
 // ─── AI-driven step resolution ────────────────────────────────────────────────
-const AI_STEPS = new Set([3, 4, 5]);
+const AI_STEPS = new Set([4, 5, 6]);
 
-const FALLBACK_VIBE    = "Six guests.\n\nI can already see how this room should feel.\n\nI'll set the tone before anyone realises what's happening.";
-const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nPick what draws you.";
+const FALLBACK_VIBE    = "Something is already taking shape.\n\nI'll set the tone before anyone realises what's happening.";
+const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nTell me what draws you.";
 const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
 // Fallbacks for dynamically-generated steps 1 & 2
 const FALLBACK_STEP1   = "Good. And what night are we talking?";
@@ -876,7 +877,7 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking  = phase === "thinking";
-  const isPaymentView   = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
+  const isPaymentView   = current.view === "cart" || current.view === "apple-pay";
   const isFlavorPick    = current.view === "flavor-pick";
 
   return (

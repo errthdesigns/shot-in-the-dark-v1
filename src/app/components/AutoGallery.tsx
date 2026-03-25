@@ -84,6 +84,7 @@ interface AutoGalleryProps {
   visibleCount?: number;
   tileSlots?:    TileSlot[];
   style?:        React.CSSProperties;
+  onImageTap?:   (imgIndex: number) => void;
 }
 
 export function AutoGallery({
@@ -92,6 +93,7 @@ export function AutoGallery({
   visibleCount = 16,
   tileSlots    = [],
   style,
+  onImageTap,
 }: AutoGalleryProps) {
   const COUNT = images.length > 0 ? Math.min(visibleCount, images.length * 4) : 0;
 
@@ -264,6 +266,7 @@ export function AutoGallery({
             <div
               key={i}
               ref={(el) => { wrapRefs.current[i] = el; }}
+              onClick={onImageTap ? () => { onImageTap(planes.current[i].imgIdx); } : undefined}
               style={{
                 position:           "absolute",
                 width:              sp.w,
@@ -275,6 +278,7 @@ export function AutoGallery({
                 willChange:         "transform, opacity, filter",
                 backfaceVisibility: "hidden",
                 opacity:            "0",
+                cursor:             onImageTap ? "pointer" : undefined,
                 transform:
                   `translateX(${sp.x}px) translateY(${sp.y}px)` +
                   ` translateZ(${p.z.toFixed(1)}px)` +

@@ -482,8 +482,8 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
   const parseDateVoice = (text: string): number | null => {
     const lower = text.toLowerCase();
-    // Try numeric day: "27th", "march 27", "27"
-    const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+    // Try numeric day WITH ordinal suffix only: "27th", "3rd" — avoids matching "7pm"
+    const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)\b/);
     if (dm) {
       const day = parseInt(dm[1]);
       const idx = DATES.findIndex(d => d.num === day);
@@ -537,12 +537,19 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
       }
       setHeardText(final || interim);
       if (final) {
-        if (panel === "guests")   { const n = parseGuest(final);      if (n !== null) setGuests(n); }
+        if (panel === "guests") {
+          const n = parseGuest(final);
+          if (n !== null) { setGuests(n); setTimeout(() => advanceRef.current(), 700); }
+        }
         if (panel === "datetime") {
           const t = parseTimeVoice(final); if (t) setTime(t);
           const di = parseDateVoice(final); if (di !== null) setDateIdx(di);
+          if (t || di !== null) setTimeout(() => advanceRef.current(), 700);
         }
-        if (panel === "budget")   { const b = parseBudgetVoice(final); if (b !== null) setBudget(b); }
+        if (panel === "budget") {
+          const b = parseBudgetVoice(final);
+          if (b !== null) { setBudget(b); setTimeout(() => advanceRef.current(), 700); }
+        }
       }
     };
     rec.onerror = (e: any) => {
@@ -940,7 +947,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
               <div style={{ width: 18, height: 25 }}><MicIcon color="white" /></div>
             </motion.button>
             <p style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.28)", margin: 0, letterSpacing: 0.4 }}>
-              {micActive ? "Listening…" : "or speak your answer"}
+              {heardText || (micActive ? "Listening…" : "or speak your answer")}
             </p>
           </motion.div>
         )}

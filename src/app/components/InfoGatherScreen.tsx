@@ -579,7 +579,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         }
         if (panel === "budget") {
           const b = parseBudgetVoice(final);
-          if (b !== null) setBudget(b); // no auto-advance — user taps confirm
+          if (b !== null) { setBudget(b); safeAdvance(); }
         }
       }
     };

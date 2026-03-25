@@ -447,6 +447,8 @@ export function PartyPlannerScreen() {
   // Text input overlay
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
+  // Real-time speech — shows words as user speaks (interim results)
+  const [liveTranscript, setLiveTranscript] = useState("");
   // Free chat step turn counter
   const [freeChatTurns, setFreeChatTurns]   = useState(0);
 
@@ -875,15 +877,23 @@ export function PartyPlannerScreen() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     recognition.lang = "en-US";
-    recognition.interimResults = false;
+    recognition.interimResults = true;   // show words in real-time
     recognition.maxAlternatives = 1;
 
     setPhase("recording");
     stopSpeech(); // stop any playing TTS while the user speaks
 
     recognition.onresult = (event: any) => {
-      const transcript = event.results?.[0]?.[0]?.transcript ?? "";
-      voiceTranscriptRef.current = transcript;
+      let interim = "";
+      let final   = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      const live = final || interim;
+      setLiveTranscript(live);
+      if (final) voiceTranscriptRef.current = final;
     };
 
     recognition.onerror = () => {
@@ -892,6 +902,7 @@ export function PartyPlannerScreen() {
 
     recognition.onend = () => {
       recognitionRef.current = null;
+      setLiveTranscript("");
       // Transition to transcribing whether or not we got a result
       setPhase((prev) => (prev === "recording" ? "transcribing" : prev));
     };
@@ -901,9 +912,10 @@ export function PartyPlannerScreen() {
 
   const handleTypeSubmit = () => {
     const text = typeInputValue.trim();
-    if (!text || phase !== "ready") return;
+    if (!text) return;
     setTypeInputOpen(false);
     setTypeInputValue("");
+    clearAll(); // stop any ongoing typewriter/timers
     voiceTranscriptRef.current = text;
     setPhase("transcribing");
   };
@@ -949,7 +961,7 @@ export function PartyPlannerScreen() {
             <AutoGallery
               images={showGallery ? (flavorGalleryImages.length > 0 ? flavorGalleryImages : currentGalleryImages) : []}
               speed={1.8}
-              visibleCount={6}
+              visibleCount={current.view === "flavor-pick" ? 3 : 6}
               tileSlots={tileSlots}
               onImageTap={current.view === "flavor-pick" && phase === "ready" ? (imgIdx) => {
                 const opt = FLAVOR_OPTIONS[imgIdx % FLAVOR_OPTIONS.length];
@@ -1051,17 +1063,17 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── User text bubble ─────────────────────────────────────────────────── */}
+      {/* ── User text bubble (live transcript while recording, then typed result) */}
       <AnimatePresence>
-        {userDisplay && !isPaymentView && (
+        {(userDisplay || liveTranscript) && !isPaymentView && (
           <motion.div
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.22 }}
             style={{ position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", maxWidth: 320, textAlign: "center", zIndex: 20 }}
           >
-            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: "rgba(255,255,255,0.72)", lineHeight: 1.35, margin: 0, fontStyle: "italic" }}>
-              <UserText text={userDisplay} />
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.72)", lineHeight: 1.35, margin: 0, fontStyle: "italic" }}>
+              {liveTranscript && !userDisplay ? liveTranscript : <UserText text={userDisplay} />}
             </p>
           </motion.div>
         )}

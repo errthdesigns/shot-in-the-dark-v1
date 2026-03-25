@@ -457,48 +457,108 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const budgetTimer    = useRef<ReturnType<typeof setTimeout>>();
   const advanceRef     = useRef<() => void>(() => {});
   const [micActive, setMicActive] = useState(false);
+  const [heardText, setHeardText] = useState("");   // live transcript display
   const recognitionRef = useRef<any>(null);
 
   // ── Voice helpers ─────────────────────────────────────────────────────────
+  const NUM_WORDS: Record<string, number> = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7,
+    eight:8, nine:9, ten:10, eleven:11, twelve:11, thirteen:11,
+  };
+
   const parseGuest = (text: string): number | null => {
-    const wordMap: Record<string, number> = { six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:11 };
-    const m = text.toLowerCase().match(/\b(\d+)\b/);
-    if (m) return Math.min(Math.max(parseInt(m[1]), 6), 11);
-    for (const [w, n] of Object.entries(wordMap)) if (text.toLowerCase().includes(w)) return n;
+    const lower = text.toLowerCase();
+    const dm = lower.match(/\b(\d+)\b/);
+    if (dm) return Math.min(Math.max(parseInt(dm[1]), 6), 11);
+    for (const [w, n] of Object.entries(NUM_WORDS)) if (lower.includes(w) && n >= 6) return Math.min(n, 11);
     return null;
   };
+
   const parseBudgetVoice = (text: string): number | null => {
-    const m = text.match(/\$?\s*(\d+)/);
+    const m = text.replace(/[,$]/g, "").match(/\b(\d+)\b/);
     if (!m) return null;
     return Math.max(20, Math.min(200, Math.round(parseInt(m[1]) / 10) * 10));
   };
+
+  const parseDateVoice = (text: string): number | null => {
+    const lower = text.toLowerCase();
+    // Try numeric day: "27th", "march 27", "27"
+    const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b/);
+    if (dm) {
+      const day = parseInt(dm[1]);
+      const idx = DATES.findIndex(d => d.num === day);
+      if (idx !== -1) return idx;
+    }
+    // Try day name: "friday", "fri"
+    const dayNames = ["sun","mon","tue","wed","thu","fri","sat"];
+    for (const abbr of dayNames) {
+      if (lower.includes(abbr)) {
+        const idx = DATES.findIndex(d => d.day.toLowerCase() === abbr);
+        if (idx !== -1) return idx;
+      }
+    }
+    return null;
+  };
+
   const parseTimeVoice = (text: string): string | null => {
-    const m = text.toLowerCase().match(/(\d{1,2})\s*(am|pm|o'?clock)?/);
-    if (!m) return null;
-    let h = parseInt(m[1]);
-    const pm = text.toLowerCase().includes("pm") || (!text.toLowerCase().includes("am") && h >= 5 && h < 12);
-    if (pm && h < 12) h += 12;
-    const label = `${h > 12 ? h - 12 : h}:00${h >= 12 ? "pm" : "am"}`;
-    return (TIME_OPTIONS as readonly string[]).includes(label) ? label : null;
+    const lower = text.toLowerCase();
+    // Word-to-hour map (evening times only)
+    const timeWords: Record<string, number> = { five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
+    let hour: number | null = null;
+    const dm = lower.match(/\b(\d{1,2})\b/);
+    if (dm) hour = parseInt(dm[1]);
+    if (hour === null) {
+      for (const [w, n] of Object.entries(timeWords)) if (lower.includes(w)) { hour = n; break; }
+    }
+    if (hour === null) return null;
+    // All options are PM; adjust
+    if (hour < 12) hour += 12;
+    const display = `${hour - 12}:00pm`;
+    return (TIME_OPTIONS as readonly string[]).includes(display) ? display : null;
   };
 
   const handleVoice = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
+    if (!SR) { setHeardText("Mic not supported in this browser"); setTimeout(() => setHeardText(""), 3000); return; }
     if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
     const rec = new SR();
     recognitionRef.current = rec;
-    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+    rec.lang = "en-US";
+    rec.interimResults = true;   // show words live as they're spoken
+    rec.maxAlternatives = 1;
     setMicActive(true);
+    setHeardText("");
+
     rec.onresult = (e: any) => {
-      const text = e.results?.[0]?.[0]?.transcript ?? "";
-      if (panel === "guests")   { const n = parseGuest(text);      if (n !== null) setGuests(n); }
-      if (panel === "datetime") { const t = parseTimeVoice(text);   if (t)          setTime(t);  }
-      if (panel === "budget")   { const b = parseBudgetVoice(text); if (b !== null) setBudget(b); }
+      let interim = "", final = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t; else interim += t;
+      }
+      setHeardText(final || interim);
+      if (final) {
+        if (panel === "guests")   { const n = parseGuest(final);      if (n !== null) setGuests(n); }
+        if (panel === "datetime") {
+          const t = parseTimeVoice(final); if (t) setTime(t);
+          const di = parseDateVoice(final); if (di !== null) setDateIdx(di);
+        }
+        if (panel === "budget")   { const b = parseBudgetVoice(final); if (b !== null) setBudget(b); }
+      }
     };
-    rec.onerror = () => {};
-    rec.onend   = () => { recognitionRef.current = null; setMicActive(false); };
-    rec.start();
+    rec.onerror = (e: any) => {
+      const msg = e.error === "not-allowed" ? "Mic permission denied" : e.error === "no-speech" ? "Nothing heard — try again" : "Mic error";
+      setHeardText(msg);
+    };
+    rec.onend = () => {
+      recognitionRef.current = null;
+      setMicActive(false);
+      setTimeout(() => setHeardText(""), 2500);
+    };
+    try { rec.start(); } catch {
+      setMicActive(false);
+      setHeardText("Could not start mic");
+      setTimeout(() => setHeardText(""), 2500);
+    }
   };
 
   const panel = PANELS[panelIdx];

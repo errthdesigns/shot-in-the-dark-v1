@@ -77,6 +77,7 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "spice",   label: "Spice",         src: imgDrinkH },
   { id: "dark",    label: "Dark & Bitter", src: imgDrinkE },
   { id: "smoke",   label: "Smoke",         src: imgDrinkC },
+  { id: "sweet",   label: "Sweet",         src: imgDrinkF },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -949,7 +950,7 @@ export function PartyPlannerScreen() {
             <AutoGallery
               images={showGallery ? (flavorGalleryImages.length > 0 ? flavorGalleryImages : currentGalleryImages) : []}
               speed={1.8}
-              visibleCount={6}
+              visibleCount={7}
               tileSlots={tileSlots}
               onImageTap={current.view === "flavor-pick" && phase === "ready" ? (imgIdx) => {
                 const opt = FLAVOR_OPTIONS[imgIdx % FLAVOR_OPTIONS.length];

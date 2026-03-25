@@ -40,6 +40,7 @@ const IMG_POSITIONS = [
   { x:  230, y:  130, rotZ:  4.8, w: 280, h: 190 },
   { x:   30, y: -240, rotZ: -2.3, w: 220, h: 155 },
   { x:  -40, y:  200, rotZ:  5.5, w: 200, h: 260 },
+  { x:  -90, y:   10, rotZ:  2.1, w: 240, h: 175 },
 ];
 
 // ─── Tile slot type (exported so PartyPlannerScreen can use it) ───────────────

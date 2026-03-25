@@ -967,6 +967,12 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
       {/* ── Control bar (all panels) ────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 10 }}>
+        {/* Live transcript label — sits ABOVE the button row */}
+        {(heardText || micActive) && (
+          <p style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "0 0 4px", letterSpacing: 0.4 }}>
+            {heardText || "Listening…"}
+          </p>
+        )}
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           {/* X — abort mic */}
           <motion.button
@@ -988,11 +994,6 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
             style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           ><GridIcon /></motion.button>
         </div>
-        {(heardText || micActive) && (
-          <p style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0, letterSpacing: 0.4 }}>
-            {heardText || "Listening…"}
-          </p>
-        )}
       </div>
 
       {/* ── Keyboard input overlay ───────────────────────────────────────────── */}

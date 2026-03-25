@@ -751,41 +751,20 @@ export function PartyPlannerScreen() {
         return;
       }
 
-      // ── Flavor conversation (step 5) — multi-turn before advancing ────────────
+      // ── Flavor conversation (step 5) — single turn then bottle assignment ────────
       if (step === FLAVOR_PICK_STEP) {
-        const turns = flavorTurnsRef.current;
         const history = convHistoryRef.current;
         const msgs: ConvMessage[] = [...history, { role: "user", content: uText }];
-
-        if (turns === 0) {
-          // First flavor turn: Host asks a follow-up, stays on step 5
-          setFlavorTurns(1);
-          flavorTurnsRef.current = 1;
-          // Ask Claude for one more question before assigning the bottle
-          const followUpMsgs: ConvMessage[] = [
-            ...msgs,
-            { role: "user", content: "[System: ask ONE short follow-up question about their flavor preference — no bottle assignment yet]" },
-          ];
-          hostChat(followUpMsgs).then(raw => {
-            if (cancelled) return;
-            const followUp = raw || "Interesting. Last thing — do you want heat? Or something smoky?";
-            setAiGeneratedSteps(prev => ({ ...prev, [FLAVOR_PICK_STEP]: followUp }));
-            setConvHistory([...msgs, { role: "assistant", content: followUp }]);
-            setUserDisplay("");
-            setPhase("ai_typing");
-          });
-        } else {
-          // Second flavor turn: assign the bottle and advance to step 6
-          hostChat(msgs).then(raw => {
-            if (cancelled) return;
-            const bottle = extractBottle(raw || "reposado");
-            const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
-            setAiBottle(bottle);
-            setAiGeneratedSteps(prev => ({ ...prev, 6: display }));
-            setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
-            setStep(prev => Math.min(prev + 1, STEPS.length - 1));
-          });
-        }
+        // Assign bottle immediately — no follow-up loop
+        hostChat(msgs).then(raw => {
+          if (cancelled) return;
+          const bottle = extractBottle(raw || "reposado");
+          const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
+          setAiBottle(bottle);
+          setAiGeneratedSteps(prev => ({ ...prev, 6: display }));
+          setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
+          setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+        });
         return;
       }
 
@@ -1036,7 +1015,7 @@ export function PartyPlannerScreen() {
             key="flavor-hint"
             initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.55, ease: "easeOut" }}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 90, zIndex: 30, pointerEvents: "none" }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 108, zIndex: 30, pointerEvents: "none" }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", margin: 0, letterSpacing: 0.4 }}>
               tap a flavour — or speak

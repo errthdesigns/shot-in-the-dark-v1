@@ -124,7 +124,7 @@ const AI_STEPS = new Set([4, 5, 6]);
 
 const FALLBACK_VIBE    = "Something is already taking shape.\n\nI'll set the tone before anyone realises what's happening.";
 const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something bitter and complex?\n\nTell me what draws you.";
-const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
+const FALLBACK_BOTTLE  = "Based on what we've built…\n\nThis is a Western Noir night, fuelled by Don Julio Reposado.\n\nBOTTLE: reposado";
 
 // Fallbacks for dynamically-generated steps 1 & 2
 const FALLBACK_STEP1   = "Good. And what night are we talking?";
@@ -785,7 +785,11 @@ export function PartyPlannerScreen() {
           });
         } else {
           // Second pick (heat/sweet) — assign bottle and advance
-          hostChat(msgs).then(raw => {
+          const bottleMsgs: ConvMessage[] = [
+            ...msgs,
+            { role: "user", content: "[System: Based on everything you know about this guest, name their night and assign the bottle. Format EXACTLY as: 'Based on what we've built…\\n\\nThis is a [evocative 2-3 word theme] night, fuelled by Don Julio [Reposado|Cristalino|Blanco].\\n\\nBOTTLE: reposado' (or cristalino/blanco). 2 sentences max. Stay in character.]" },
+          ];
+          hostChat(bottleMsgs).then(raw => {
             if (cancelled) return;
             const bottle = extractBottle(raw || "reposado");
             const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;

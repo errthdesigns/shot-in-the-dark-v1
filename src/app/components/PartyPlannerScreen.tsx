@@ -79,14 +79,6 @@ const FLAVOR_OPTIONS: FlavorOption[] = [
   { id: "dark",    label: "Dark & Bitter", src: imgDrinkE },
   { id: "smoke",   label: "Smoke",         src: imgDrinkC },
 ];
-const FLAVOR_LINES: Record<string, string> = {
-  citrus:  "Citrus. Sharp. Clean. A good spine.",
-  berries: "Berries. Dark underneath. Good instinct.",
-  fruit:   "Stone fruit. Soft on top, something underneath.",
-  spice:   "Spice. Heat at the back of the throat.",
-  dark:    "Dark and bitter. Bold call.",
-  smoke:   "Smoke. The most dangerous pick on the board.",
-};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
@@ -442,13 +434,15 @@ export function PartyPlannerScreen() {
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
-  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
   const [aiBottle, setAiBottle]             = useState<string>("reposado");
   const [aiGeneratedSteps, setAiGeneratedSteps] = useState<Record<number, string>>({});
   const [convHistory, setConvHistory]       = useState<ConvMessage[]>([]);
-  const [flavourCallPending, setFlavourCallPending] = useState(false);
   // Steps that become AI-driven because the user spoke (so they show thinking dots)
   const [dynamicSteps, setDynamicSteps]     = useState<Set<number>>(new Set());
+  // Multi-turn flavor conversation state
+  const [flavorTurns, setFlavorTurns]       = useState(0);   // how many user turns done on step 4
+  // Image tile tap on step 4 — feeds into the transcribing pipeline just like mic
+  const [pendingFlavorInput, setPendingFlavorInput] = useState<string | null>(null);
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -460,6 +454,8 @@ export function PartyPlannerScreen() {
   const userVoiceInputsRef = useRef<string[]>([]);
   // Ref mirror of convHistory so Effect 4 can read current value without stale closure
   const convHistoryRef     = useRef<ConvMessage[]>([]);
+  // Ref mirror of flavorTurns so Effect 4 closure never goes stale
+  const flavorTurnsRef     = useRef(0);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -564,8 +560,17 @@ export function PartyPlannerScreen() {
     });
   }
 
-  // Keep convHistoryRef in sync so Effect 4 can read it without stale closure
-  useEffect(() => { convHistoryRef.current = convHistory; }, [convHistory]);
+  // Keep refs in sync so Effect 4 closures never go stale
+  useEffect(() => { convHistoryRef.current  = convHistory;  }, [convHistory]);
+  useEffect(() => { flavorTurnsRef.current  = flavorTurns;  }, [flavorTurns]);
+
+  // Image tile tap on step 4 → feed into the same transcribing pipeline as mic
+  useEffect(() => {
+    if (!pendingFlavorInput || phase !== "ready" || step !== FLAVOR_PICK_STEP) return;
+    voiceTranscriptRef.current = pendingFlavorInput;
+    setPendingFlavorInput(null);
+    setPhase("transcribing");
+  }, [pendingFlavorInput, phase, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
@@ -690,19 +695,63 @@ export function PartyPlannerScreen() {
       advanceTimerRef.current = setTimeout(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 300);
       return clearAdvance;
     }
+    let cancelled = false;
     let j = 0;
-    const next = () => {
-      if (j >= uText.length) {
-        setIsUserTyping(false);
-        advanceTimerRef.current = setTimeout(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 520);
+
+    // After the user text finishes typing, decide what happens next
+    const afterType = () => {
+      setIsUserTyping(false);
+
+      // ── Flavor conversation (step 4) — multi-turn before advancing ────────────
+      if (step === FLAVOR_PICK_STEP) {
+        const turns = flavorTurnsRef.current;
+        const history = convHistoryRef.current;
+        const msgs: ConvMessage[] = [...history, { role: "user", content: uText }];
+
+        if (turns === 0) {
+          // First flavor turn: Host asks a follow-up, stays on step 4
+          setFlavorTurns(1);
+          flavorTurnsRef.current = 1;
+          // Ask Claude for one more question before assigning the bottle
+          const followUpMsgs: ConvMessage[] = [
+            ...msgs,
+            { role: "user", content: "[System: ask ONE short follow-up question about their flavor preference — no bottle assignment yet]" },
+          ];
+          hostChat(followUpMsgs).then(raw => {
+            if (cancelled) return;
+            const followUp = raw || "Interesting. Last thing — do you want heat? Or something smoky?";
+            setAiGeneratedSteps(prev => ({ ...prev, [FLAVOR_PICK_STEP]: followUp }));
+            setConvHistory([...msgs, { role: "assistant", content: followUp }]);
+            setUserDisplay("");
+            setPhase("ai_typing");
+          });
+        } else {
+          // Second flavor turn: assign the bottle and advance to step 5
+          hostChat(msgs).then(raw => {
+            if (cancelled) return;
+            const bottle = extractBottle(raw || "reposado");
+            const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
+            setAiBottle(bottle);
+            setAiGeneratedSteps(prev => ({ ...prev, 5: display }));
+            setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
+            setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+          });
+        }
         return;
       }
+
+      // ── All other steps: normal advance ───────────────────────────────────────
+      advanceTimerRef.current = setTimeout(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 520);
+    };
+
+    const next = () => {
+      if (j >= uText.length) { afterType(); return; }
       j++;
       setUserDisplay(uText.slice(0, j));
       typeTimerRef.current = setTimeout(next, 30);
     };
     advanceTimerRef.current = setTimeout(next, 180);
-    return () => { clearType(); clearAdvance(); };
+    return () => { cancelled = true; clearType(); clearAdvance(); };
   }, [phase, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 5: keyword-triggered ingredient reveal (step 13) ──────────────────
@@ -765,7 +814,6 @@ export function PartyPlannerScreen() {
   const handleMicClick = () => {
     unlockAudio();
     if (phase !== "ready") return;
-    if (current.view === "flavor-pick") return; // flavor-pick uses its own confirm button
 
     // Try Web Speech API (Chromium + Safari 15+)
     const SpeechRecognition =
@@ -809,26 +857,6 @@ export function PartyPlannerScreen() {
     };
 
     recognition.start();
-  };
-
-  const handleFlavorConfirm = () => {
-    if (selectedFlavors.length === 0 || flavourCallPending) return;
-    setFlavourCallPending(true);
-    const flavorStr = selectedFlavors.join(", ");
-    const userMsg = `I'm drawn to: ${flavorStr}. What tequila fits?`;
-    const msgs: ConvMessage[] = [
-      ...convHistory,
-      { role: "user", content: userMsg },
-    ];
-    hostChat(msgs).then(raw => {
-      const bottle = extractBottle(raw || "reposado");
-      const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
-      setAiBottle(bottle);
-      setAiGeneratedSteps(prev => ({ ...prev, 5: display }));
-      setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
-      setFlavourCallPending(false);
-      setStep(prev => Math.min(prev + 1, STEPS.length - 1));
-    });
   };
 
   const handleCocktailComplete = () => {
@@ -925,50 +953,37 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Flavor picker (step 4) ────────────────────────────────────────────── */}
+      {/* ── Flavor picker (step 4) — tappable image tiles ────────────────────── */}
       <AnimatePresence>
-        {current.view === "flavor-pick" && (
+        {current.view === "flavor-pick" && phase === "ready" && (
           <motion.div
             key="flavor-ui"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 56, zIndex: 30, pointerEvents: "none" }}
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 68, zIndex: 30, pointerEvents: "none" }}
           >
-            {/* Flavor option buttons */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", padding: "0 20px", marginBottom: 12, pointerEvents: "auto" }}>
-              {FLAVOR_OPTIONS.map(opt => {
-                const sel = selectedFlavors.includes(opt.id);
-                return (
-                  <motion.button
-                    key={opt.id}
-                    onClick={() => setSelectedFlavors(prev =>
-                      prev.includes(opt.id) ? prev.filter(id => id !== opt.id) : [...prev, opt.id]
-                    )}
-                    whileTap={{ scale: 0.93 }}
-                    animate={{ backgroundColor: sel ? "white" : "rgba(255,255,255,0.12)", color: sel ? "#000" : "rgba(255,255,255,0.85)" }}
-                    transition={{ duration: 0.18 }}
-                    style={{ padding: "9px 18px", borderRadius: 22, border: "1px solid rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "Spectral, serif", fontSize: 14, letterSpacing: 0.2 }}
-                  >
-                    {opt.label}
-                  </motion.button>
-                );
-              })}
-            </div>
-            {/* Confirm button */}
-            <AnimatePresence>
-              {selectedFlavors.length > 0 && (
+            {/* Hint label */}
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", margin: "0 0 10px", letterSpacing: 0.4, pointerEvents: "none" }}>
+              tap a flavour — or speak
+            </p>
+            {/* Two rows of 3 image tiles */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, padding: "0 20px", pointerEvents: "auto" }}>
+              {FLAVOR_OPTIONS.map(opt => (
                 <motion.button
-                  key="build-it"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.28 }}
-                  onClick={handleFlavorConfirm}
-                  disabled={flavourCallPending}
-                  style={{ display: "block", margin: "0 auto", padding: "13px 36px", borderRadius: 26, backgroundColor: flavourCallPending ? "rgba(255,255,255,0.4)" : "white", border: "none", cursor: flavourCallPending ? "default" : "pointer", fontFamily: "Spectral, serif", fontWeight: 500, fontSize: 16, color: "#000", letterSpacing: -0.2, pointerEvents: "auto" }}
+                  key={opt.id}
+                  onClick={(e) => { e.stopPropagation(); setPendingFlavorInput(`I'm drawn to ${opt.label.toLowerCase()}`); }}
+                  whileTap={{ scale: 0.92, opacity: 0.7 }}
+                  style={{ position: "relative", aspectRatio: "1", borderRadius: 14, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "none", padding: 0 }}
                 >
-                  {flavourCallPending ? "…" : "Build it →"}
+                  <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  {/* Label overlay */}
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%)", borderRadius: 14 }} />
+                  <span style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 11, color: "white", letterSpacing: 0.3, fontWeight: 500 }}>
+                    {opt.label}
+                  </span>
                 </motion.button>
-              )}
-            </AnimatePresence>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

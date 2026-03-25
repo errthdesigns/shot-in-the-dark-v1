@@ -123,7 +123,7 @@ const STEPS: Step[] = [
 const AI_STEPS = new Set([4, 5, 6]);
 
 const FALLBACK_VIBE    = "Something is already taking shape.\n\nI'll set the tone before anyone realises what's happening.";
-const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nTell me what draws you.";
+const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something bitter and complex?\n\nTell me what draws you.";
 const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
 
 // Fallbacks for dynamically-generated steps 1 & 2
@@ -768,7 +768,7 @@ export function PartyPlannerScreen() {
         const msgs: ConvMessage[] = [...history, { role: "user", content: uText }];
 
         if (turn === 0) {
-          // First pick (smooth/spicy) — ask about heat vs sweet
+          // First pick (smooth/bitter) — ask about heat vs sweet
           setFlavorTurns(1);
           flavorTurnsRef.current = 1;
           const followUpMsgs: ConvMessage[] = [
@@ -859,7 +859,7 @@ export function PartyPlannerScreen() {
     flavorFetchDoneRef.current = true;
     const msgs: ConvMessage[] = [
       ...convHistoryRef.current,
-      { role: "user", content: "[System: ask what flavours appeal to them. Tell them in character they can speak their preference or just describe what draws them. 2-3 lines max, keep it dark and intriguing.]" },
+      { role: "user", content: "[System: ask whether they want something smooth and refined or something bitter and complex. 2-3 lines max, keep it dark and intriguing.]" },
     ];
     hostChat(msgs).then(raw => {
       const text = raw || FALLBACK_FLAVOUR;

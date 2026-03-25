@@ -126,11 +126,15 @@ const FALLBACK_VIBE    = "Something is already taking shape.\n\nI'll set the ton
 const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something with more edge?\n\nTell me what draws you.";
 const FALLBACK_BOTTLE  = "Based on what we've built tonight…\n\nThis is a Don Julio Reposado night.";
 
-// Pill options for each flavor turn (0 = smooth/spicy question, 1 = heat/sweet question)
-const FLAVOR_CHOICES = [
-  ["Something smooth and refined", "More of a spicy edge"],
-  ["I like heat", "Something sweet"],
-] as const;
+// Static collage layout for the flavor-pick screen — 6 images positioned in a mosaic
+const FLAVOR_COLLAGE: { idx: number; left: number; top: number; w: number; h: number; radius: number }[] = [
+  { idx: 0, left: 28,  top: 195, w: 175, h: 152, radius: 12 },
+  { idx: 1, left: 215, top: 188, w: 130, h: 130, radius: 65 },
+  { idx: 5, left: 172, top: 272, w: 122, h:  88, radius:  8 },
+  { idx: 2, left: 88,  top: 335, w: 168, h: 130, radius: 11 },
+  { idx: 3, left: 22,  top: 448, w: 165, h: 158, radius: 12 },
+  { idx: 4, left: 225, top: 428, w: 126, h: 116, radius: 10 },
+];
 // Fallbacks for dynamically-generated steps 1 & 2
 const FALLBACK_STEP1   = "Good. And what night are we talking?";
 const FALLBACK_STEP2   = "Got it.\n\nDoes that all sound right to you?";
@@ -451,6 +455,8 @@ export function PartyPlannerScreen() {
   const [flavorTurns, setFlavorTurns]       = useState(0);   // how many user turns done on step 5
   // Image tile tap on step 5 — feeds into the transcribing pipeline just like mic
   const [pendingFlavorInput, setPendingFlavorInput] = useState<string | null>(null);
+  // Tapped flavor IDs that accumulate before auto-submitting
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
   // Text input overlay
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
@@ -459,9 +465,10 @@ export function PartyPlannerScreen() {
   // Free chat step turn counter
   const [freeChatTurns, setFreeChatTurns]   = useState(0);
 
-  const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typeTimerRef          = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const thinkTimerRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const advanceTimerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flavorSubmitTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Voice capture refs
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
@@ -486,8 +493,7 @@ export function PartyPlannerScreen() {
   const showGallery =
     current.imgState === "full" ||
     current.imgState === "gatsby-reveal" ||
-    current.imgState === "keyword-reveal" ||
-    current.view === "flavor-pick";
+    current.imgState === "keyword-reveal";
 
   const currentGalleryImages =
     current.view === "flavor-pick"        ? [] :
@@ -497,11 +503,6 @@ export function PartyPlannerScreen() {
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
   // and would cancel/restart (resetting all planes) if this was a new array each render
-  const flavorGalleryImages = useMemo(
-    () => current.view === "flavor-pick" ? FLAVOR_OPTIONS.map(o => o.src) : [],
-    [current.view] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
   // ── Build tile slots ────────────────────────────────────────────────────────
   const tileSlots: TileSlot[] = [];
   if (current.guestCount !== null) {
@@ -587,12 +588,28 @@ export function PartyPlannerScreen() {
     freeChatTurnsRef.current = 0;
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset flavor turn counter each time step 5 is entered
+  // Reset flavor turn counter + clear selection each time step 5 is entered
   useEffect(() => {
     if (step !== 5) return;
     setFlavorTurns(0);
     flavorTurnsRef.current = 0;
+    setSelectedFlavors([]);
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When the user taps images, debounce 1.5 s then submit the combined selection
+  useEffect(() => {
+    if (selectedFlavors.length === 0) return;
+    if (phase !== "ready") return;
+    if (flavorSubmitTimerRef.current) clearTimeout(flavorSubmitTimerRef.current);
+    flavorSubmitTimerRef.current = setTimeout(() => {
+      const text = selectedFlavors.length === 1
+        ? `I like ${selectedFlavors[0]}`
+        : `I like ${selectedFlavors.slice(0, -1).join(", ")} and ${selectedFlavors[selectedFlavors.length - 1]}`;
+      setSelectedFlavors([]);
+      setPendingFlavorInput(text);
+    }, 1500);
+    return () => { if (flavorSubmitTimerRef.current) clearTimeout(flavorSubmitTimerRef.current); };
+  }, [selectedFlavors, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Image tile tap on step 5 → feed into the same transcribing pipeline as mic
   useEffect(() => {
@@ -972,6 +989,46 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
+      {/* ── Flavor pick screen — static image collage ────────────────────── */}
+      <AnimatePresence>
+        {isFlavorPick && (
+          <motion.div key="flavor-bg"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 45%, #7a0e0e 0%, #3d0505 55%, #080000 100%)" }}
+          >
+            {FLAVOR_COLLAGE.map(({ idx, left, top, w, h, radius }) => {
+              const opt = FLAVOR_OPTIONS[idx];
+              const isSelected = selectedFlavors.includes(opt.label);
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => {
+                    if (phase !== "ready") return;
+                    setSelectedFlavors(prev =>
+                      prev.includes(opt.label)
+                        ? prev.filter(f => f !== opt.label)
+                        : [...prev, opt.label]
+                    );
+                  }}
+                  style={{
+                    position: "absolute", left, top, width: w, height: h,
+                    borderRadius: radius, overflow: "hidden",
+                    cursor: phase === "ready" ? "pointer" : "default",
+                    outline: isSelected ? "3px solid rgba(255,255,255,0.85)" : "none",
+                    outlineOffset: -3,
+                    transition: "outline 0.15s, opacity 0.15s",
+                    opacity: selectedFlavors.length > 0 && !isSelected ? 0.55 : 1,
+                  }}
+                >
+                  <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", pointerEvents: "none", userSelect: "none" }} draggable={false} />
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── 3-D gallery ────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {showGallery && (
@@ -981,9 +1038,9 @@ export function PartyPlannerScreen() {
             style={{ position: "absolute", inset: 0 }}
           >
             <AutoGallery
-              images={showGallery ? (flavorGalleryImages.length > 0 ? flavorGalleryImages : currentGalleryImages) : []}
+              images={currentGalleryImages}
               speed={1.8}
-              visibleCount={7}
+              visibleCount={6}
               tileSlots={tileSlots}
             />
             {/* Only apply darkening overlays when we have background photos — void steps stay pure black */}
@@ -1037,28 +1094,17 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Flavor choice pills (step 5) ─────────────────────────────────────── */}
+      {/* ── Flavor screen hint ───────────────────────────────────────────────── */}
       <AnimatePresence>
-        {current.view === "flavor-pick" && phase === "ready" && (
-          <motion.div
-            key={`flavor-pills-${flavorTurns}`}
-            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.55, ease: "easeOut" }}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 108, zIndex: 30, display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}
+        {isFlavorPick && phase === "ready" && selectedFlavors.length === 0 && (
+          <motion.p
+            key="flavor-hint"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 108, zIndex: 30, fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 12, color: "rgba(255,255,255,0.38)", textAlign: "center", margin: 0, letterSpacing: 0.4, pointerEvents: "none" }}
           >
-            {FLAVOR_CHOICES[flavorTurns]?.map((choice) => (
-              <button
-                key={choice}
-                onClick={() => setPendingFlavorInput(choice)}
-                style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 14, color: "rgba(255,255,255,0.85)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 22, padding: "8px 22px", cursor: "pointer", letterSpacing: 0.2 }}
-              >
-                {choice}
-              </button>
-            ))}
-            <p style={{ fontFamily: "Spectral, serif", fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "4px 0 0", letterSpacing: 0.4 }}>
-              or speak your answer
-            </p>
-          </motion.div>
+            tap what draws you — or speak
+          </motion.p>
         )}
       </AnimatePresence>
 

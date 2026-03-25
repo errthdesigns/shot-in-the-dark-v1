@@ -163,7 +163,7 @@ export function CartScreen({ onApplePay, guests = 6 }: CartScreenProps) {
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>TOTAL</p>
           <p style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 20, color: "#0d0d0d", lineHeight: "32px", margin: 0 }}>${total}</p>
         </div>
-        <button style={{ width: "100%", height: 44, backgroundColor: "#262626", borderRadius: 5, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
+        <button onClick={onApplePay} style={{ width: "100%", height: 44, backgroundColor: "#262626", borderRadius: 5, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8 }}>
           <span style={{ fontFamily: "Arial, sans-serif", fontWeight: 700, fontSize: 15, color: "white" }}>Checkout</span>
         </button>
         <button onClick={onApplePay} style={{ width: "100%", height: 44, backgroundColor: "#262626", borderRadius: 5, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>

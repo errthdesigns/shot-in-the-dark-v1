@@ -40,6 +40,7 @@ const IMG_POSITIONS = [
   { x:  230, y:  130, rotZ:  4.8, w: 280, h: 190 },
   { x:   30, y: -240, rotZ: -2.3, w: 220, h: 155 },
   { x:  -40, y:  200, rotZ:  5.5, w: 200, h: 260 },
+  { x:  -90, y:   10, rotZ:  2.1, w: 240, h: 175 },
 ];
 
 // ─── Tile slot type (exported so PartyPlannerScreen can use it) ───────────────
@@ -84,6 +85,7 @@ interface AutoGalleryProps {
   visibleCount?: number;
   tileSlots?:    TileSlot[];
   style?:        React.CSSProperties;
+  onImageTap?:   (imgIndex: number) => void;
 }
 
 export function AutoGallery({
@@ -92,6 +94,7 @@ export function AutoGallery({
   visibleCount = 16,
   tileSlots    = [],
   style,
+  onImageTap,
 }: AutoGalleryProps) {
   const COUNT = images.length > 0 ? Math.min(visibleCount, images.length * 4) : 0;
 
@@ -264,6 +267,7 @@ export function AutoGallery({
             <div
               key={i}
               ref={(el) => { wrapRefs.current[i] = el; }}
+              onClick={onImageTap ? () => { onImageTap(planes.current[i].imgIdx); } : undefined}
               style={{
                 position:           "absolute",
                 width:              sp.w,
@@ -275,6 +279,7 @@ export function AutoGallery({
                 willChange:         "transform, opacity, filter",
                 backfaceVisibility: "hidden",
                 opacity:            "0",
+                cursor:             onImageTap ? "pointer" : undefined,
                 transform:
                   `translateX(${sp.x}px) translateY(${sp.y}px)` +
                   ` translateZ(${p.z.toFixed(1)}px)` +

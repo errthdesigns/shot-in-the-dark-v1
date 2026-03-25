@@ -65,10 +65,10 @@ const QUESTIONS: Record<Panel, string> = {
 };
 
 const VOICE_LINES: Record<Panel, string> = {
-  guests:   "First up, how many suspects... I mean, guests are we expecting?",
-  address:  "Where's the scene being set? Drop your pin on the map.",
-  datetime: "Alrighty, what date are we talking?",
-  budget:   "Last question — how deep are the pockets?",
+  guests:   "First up, how many suspects... I mean, guests are we expecting? Tap a number — or just say it.",
+  address:  "Where's the crime scene? Drag that little yellow man onto the map. Don't worry — he's seen worse.",
+  datetime: "Alrighty, what date are we talking? Tap to pick — or just tell me.",
+  budget:   "Last question — how deep are the pockets? Slide it, or say a number.",
 };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -453,10 +453,151 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
 const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
-  const scrollRef     = useRef<HTMLDivElement>(null);
-  const budgetTimer   = useRef<ReturnType<typeof setTimeout>>();
-  // Always-fresh ref to advance() so async callbacks never see stale closures
-  const advanceRef    = useRef<() => void>(() => {});
+  const scrollRef      = useRef<HTMLDivElement>(null);
+
+  const advanceRef     = useRef<() => void>(() => {});
+  const [micActive, setMicActive] = useState(false);
+  const [heardText, setHeardText] = useState("");   // live transcript display
+  const [typeOpen, setTypeOpen]   = useState(false);
+  const [typeValue, setTypeValue] = useState("");
+  const recognitionRef = useRef<any>(null);
+  const panelIdxRef    = useRef(panelIdx);
+  useEffect(() => { panelIdxRef.current = panelIdx; }, [panelIdx]);
+
+  // ── Voice helpers ─────────────────────────────────────────────────────────
+  const NUM_WORDS: Record<string, number> = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7,
+    eight:8, nine:9, ten:10, eleven:11, twelve:11, thirteen:11,
+  };
+
+  const parseGuest = (text: string): number | null => {
+    const lower = text.toLowerCase();
+    const dm = lower.match(/\b(\d+)\b/);
+    if (dm) return Math.min(Math.max(parseInt(dm[1]), 6), 11);
+    for (const [w, n] of Object.entries(NUM_WORDS)) if (lower.includes(w) && n >= 6) return Math.min(n, 11);
+    return null;
+  };
+
+  const parseBudgetVoice = (text: string): number | null => {
+    const m = text.replace(/[,$]/g, "").match(/\b(\d+)\b/);
+    if (!m) return null;
+    return Math.max(20, Math.min(200, Math.round(parseInt(m[1]) / 10) * 10));
+  };
+
+  const parseDateVoice = (text: string): number | null => {
+    const lower = text.toLowerCase();
+    // Try numeric day WITH ordinal suffix only: "27th", "3rd" — avoids matching "7pm"
+    const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)\b/);
+    if (dm) {
+      const day = parseInt(dm[1]);
+      const idx = DATES.findIndex(d => d.num === day);
+      if (idx !== -1) return idx;
+    }
+    // Try day name: "friday", "fri"
+    const dayNames = ["sun","mon","tue","wed","thu","fri","sat"];
+    for (const abbr of dayNames) {
+      if (lower.includes(abbr)) {
+        const idx = DATES.findIndex(d => d.day.toLowerCase() === abbr);
+        if (idx !== -1) return idx;
+      }
+    }
+    return null;
+  };
+
+  const parseTimeVoice = (text: string): string | null => {
+    const lower = text.toLowerCase();
+    // Word-to-hour map (evening times only)
+    const timeWords: Record<string, number> = { five:5, six:6, seven:7, eight:8, nine:9, ten:10 };
+    let hour: number | null = null;
+    const dm = lower.match(/\b(\d{1,2})\b/);
+    if (dm) hour = parseInt(dm[1]);
+    if (hour === null) {
+      for (const [w, n] of Object.entries(timeWords)) if (lower.includes(w)) { hour = n; break; }
+    }
+    if (hour === null) return null;
+    // All options are PM; adjust
+    if (hour < 12) hour += 12;
+    const display = `${hour - 12}:00pm`;
+    return (TIME_OPTIONS as readonly string[]).includes(display) ? display : null;
+  };
+
+  const handleTypeSubmit = () => {
+    const text = typeValue.trim();
+    if (!text) return;
+    const capturedIdx = panelIdxRef.current;
+    const safeAdvance = (delay = 400) => setTimeout(() => {
+      if (panelIdxRef.current === capturedIdx) advanceRef.current();
+    }, delay);
+    if (panel === "guests") { const n = parseGuest(text); if (n !== null) { setGuests(n); safeAdvance(); } }
+    if (panel === "datetime") {
+      const t = parseTimeVoice(text); if (t) setTime(t);
+      const di = parseDateVoice(text); if (di !== null) setDateIdx(di);
+    }
+    if (panel === "budget") { const b = parseBudgetVoice(text); if (b !== null) setBudget(b); } // no auto-advance — user taps confirm
+    setTypeOpen(false);
+    setTypeValue("");
+  };
+
+  const handleVoice = () => {
+    // Address panel: speak a quip instead of parsing
+    if (panel === "address") {
+      stopSpeech();
+      speakText("I'd love to take a postcode by ear, but my geography's a little fuzzy. Just drag that little yellow fellow onto the map — he's had worse landings, trust me.");
+      return;
+    }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setHeardText("Mic not supported in this browser"); setTimeout(() => setHeardText(""), 3000); return; }
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
+    const rec = new SR();
+    recognitionRef.current = rec;
+    rec.lang = "en-US";
+    rec.interimResults = true;   // show words live as they're spoken
+    rec.maxAlternatives = 1;
+    setMicActive(true);
+    setHeardText("");
+
+    rec.onresult = (e: any) => {
+      let interim = "", final = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t; else interim += t;
+      }
+      setHeardText(final || interim);
+      if (final) {
+        const capturedIdx = panelIdxRef.current;
+        const safeAdvance = (delay = 700) => setTimeout(() => {
+          if (panelIdxRef.current === capturedIdx) advanceRef.current();
+        }, delay);
+        if (panel === "guests") {
+          const n = parseGuest(final);
+          if (n !== null) { setGuests(n); safeAdvance(); }
+        }
+        if (panel === "datetime") {
+          const t = parseTimeVoice(final); if (t) setTime(t);
+          const di = parseDateVoice(final); if (di !== null) setDateIdx(di);
+          if (t || di !== null) safeAdvance();
+        }
+        if (panel === "budget") {
+          const b = parseBudgetVoice(final);
+          if (b !== null) { setBudget(b); safeAdvance(); }
+        }
+      }
+    };
+    rec.onerror = (e: any) => {
+      const msg = e.error === "not-allowed" ? "Mic permission denied" : e.error === "no-speech" ? "Nothing heard — try again" : "Mic error";
+      setHeardText(msg);
+    };
+    rec.onend = () => {
+      recognitionRef.current = null;
+      setMicActive(false);
+      setTimeout(() => setHeardText(""), 2500);
+    };
+    try { rec.start(); } catch {
+      setMicActive(false);
+      setHeardText("Could not start mic");
+      setTimeout(() => setHeardText(""), 2500);
+    }
+  };
 
   const panel = PANELS[panelIdx];
 
@@ -526,12 +667,7 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
     return () => clearTimeout(id);
   }, [dateIdx, time, panel]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-advance: budget — 3 s after slider movement, or 8 s after panel entry.
-  useEffect(() => {
-    if (panel !== "budget") return;
-    const id = setTimeout(() => advanceRef.current(), 8000);
-    return () => clearTimeout(id);
-  }, [panel]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Budget: no auto-advance — user must tap confirm button
 
   const PAD = 53;
 
@@ -594,6 +730,18 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
           >
             {QUESTIONS[panel]}
           </motion.p>
+
+          {/* In-character hint */}
+          {panel !== "address" && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 13, color: "rgba(255,255,255,0.32)", textAlign: "center", margin: "8px 0 0", letterSpacing: 0.2 }}
+            >
+              tap to select — or speak
+            </motion.p>
+          )}
 
           {/* Content area */}
           <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -783,15 +931,11 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                   </p>
                 </div>
 
-                <div style={{ width: "100%", marginBottom: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                <div style={{ width: "100%", marginBottom: 16, display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <input
                     type="range" min={20} max={200} step={10}
                     value={budget}
-                    onChange={e => {
-                      setBudget(Number(e.target.value));
-                      clearTimeout(budgetTimer.current);
-                      budgetTimer.current = setTimeout(() => advanceRef.current(), 3000);
-                    }}
+                    onChange={e => setBudget(Number(e.target.value))}
                     style={{ width: "100%", cursor: "pointer" }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, width: "100%" }}>
@@ -799,6 +943,20 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
                     <span style={{ fontFamily: "Inter, sans-serif", fontWeight: 700, fontSize: 10, color: "#6f6f6f", letterSpacing: 2.8 }}>$200</span>
                   </div>
                 </div>
+
+                {/* Explicit confirm button */}
+                <motion.button
+                  onClick={() => advanceRef.current()}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    marginTop: 8, padding: "14px 40px", borderRadius: 40,
+                    border: "1px solid rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.1)",
+                    color: "white", fontFamily: "Spectral, serif", fontSize: 16,
+                    fontStyle: "italic", letterSpacing: 0.3, cursor: "pointer",
+                  }}
+                >
+                  that's the one →
+                </motion.button>
               </motion.div>
             )}
 
@@ -806,6 +964,63 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         </motion.div>
       </AnimatePresence>
 
+
+      {/* ── Control bar (all panels) ────────────────────────────────────────── */}
+      <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 10 }}>
+        {/* Live transcript label — sits ABOVE the button row */}
+        {(heardText || micActive) && (
+          <p style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.35)", margin: "0 0 4px", letterSpacing: 0.4 }}>
+            {heardText || "Listening…"}
+          </p>
+        )}
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          {/* X — abort mic */}
+          <motion.button
+            onClick={() => { if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; } setMicActive(false); setHeardText(""); }}
+            style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          ><XIcon /></motion.button>
+
+          {/* Mic */}
+          <motion.button
+            onClick={handleVoice}
+            animate={micActive ? { scale: [1, 1.12, 1], backgroundColor: "#cc2222" } : { backgroundColor: "rgba(255,255,255,0.13)" }}
+            transition={micActive ? { duration: 0.9, repeat: Infinity } : { duration: 0.2 }}
+            style={{ width: 56, height: 56, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          ><div style={{ width: 18, height: 25 }}><MicIcon color="white" /></div></motion.button>
+
+          {/* Keyboard — only useful on non-address panels */}
+          <motion.button
+            onClick={() => { if (panel !== "address") setTypeOpen(true); else { stopSpeech(); speakText("Tap the map, darling. I don't do postcodes."); } }}
+            style={{ width: 44, height: 44, borderRadius: "50%", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          ><GridIcon /></motion.button>
+        </div>
+      </div>
+
+      {/* ── Keyboard input overlay ───────────────────────────────────────────── */}
+      <AnimatePresence>
+        {typeOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+            style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(10,5,5,0.97)", borderRadius: "20px 20px 0 0", padding: "24px 20px 32px", zIndex: 30, display: "flex", flexDirection: "column", gap: 12 }}
+          >
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 13, color: "rgba(255,255,255,0.5)", margin: 0, textAlign: "center", fontStyle: "italic" }}>
+              {panel === "guests" ? "type a number (6–11)" : panel === "datetime" ? "e.g. friday or 7pm" : "type an amount e.g. 50"}
+            </p>
+            <input
+              autoFocus
+              value={typeValue}
+              onChange={e => setTypeValue(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleTypeSubmit(); if (e.key === "Escape") { setTypeOpen(false); setTypeValue(""); } }}
+              placeholder="type your answer…"
+              style={{ fontFamily: "Spectral, serif", fontSize: 18, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 10, color: "white", padding: "12px 16px", outline: "none" }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setTypeOpen(false); setTypeValue(""); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.5)", fontFamily: "Spectral, serif", fontSize: 14, cursor: "pointer" }}>cancel</button>
+              <button onClick={handleTypeSubmit} style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: "white", color: "black", fontFamily: "Spectral, serif", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>confirm</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Slider styles */}
       <style>{`

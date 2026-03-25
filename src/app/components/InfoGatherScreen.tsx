@@ -65,10 +65,10 @@ const QUESTIONS: Record<Panel, string> = {
 };
 
 const VOICE_LINES: Record<Panel, string> = {
-  guests:   "First up, how many suspects... I mean, guests are we expecting?",
+  guests:   "First up, how many suspects... I mean, guests are we expecting? Tap a number — or just say it.",
   address:  "Where's the scene being set? Drop your pin on the map.",
-  datetime: "Alrighty, what date are we talking?",
-  budget:   "Last question — how deep are the pockets?",
+  datetime: "Alrighty, what date are we talking? Tap to pick — or just tell me.",
+  budget:   "Last question — how deep are the pockets? Slide it, or say a number.",
 };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -453,10 +453,53 @@ export function InfoGatherScreen({ playerName, onComplete }: Props) {
 const [dateIdx,  setDateIdx]  = useState<number | null>(null);
   const [time,     setTime]     = useState<string | null>(null);
   const [budget,   setBudget]   = useState(60);
-  const scrollRef     = useRef<HTMLDivElement>(null);
-  const budgetTimer   = useRef<ReturnType<typeof setTimeout>>();
-  // Always-fresh ref to advance() so async callbacks never see stale closures
-  const advanceRef    = useRef<() => void>(() => {});
+  const scrollRef      = useRef<HTMLDivElement>(null);
+  const budgetTimer    = useRef<ReturnType<typeof setTimeout>>();
+  const advanceRef     = useRef<() => void>(() => {});
+  const [micActive, setMicActive] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // ── Voice helpers ─────────────────────────────────────────────────────────
+  const parseGuest = (text: string): number | null => {
+    const wordMap: Record<string, number> = { six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:11 };
+    const m = text.toLowerCase().match(/\b(\d+)\b/);
+    if (m) return Math.min(Math.max(parseInt(m[1]), 6), 11);
+    for (const [w, n] of Object.entries(wordMap)) if (text.toLowerCase().includes(w)) return n;
+    return null;
+  };
+  const parseBudgetVoice = (text: string): number | null => {
+    const m = text.match(/\$?\s*(\d+)/);
+    if (!m) return null;
+    return Math.max(20, Math.min(200, Math.round(parseInt(m[1]) / 10) * 10));
+  };
+  const parseTimeVoice = (text: string): string | null => {
+    const m = text.toLowerCase().match(/(\d{1,2})\s*(am|pm|o'?clock)?/);
+    if (!m) return null;
+    let h = parseInt(m[1]);
+    const pm = text.toLowerCase().includes("pm") || (!text.toLowerCase().includes("am") && h >= 5 && h < 12);
+    if (pm && h < 12) h += 12;
+    const label = `${h > 12 ? h - 12 : h}:00${h >= 12 ? "pm" : "am"}`;
+    return (TIME_OPTIONS as readonly string[]).includes(label) ? label : null;
+  };
+
+  const handleVoice = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} recognitionRef.current = null; }
+    const rec = new SR();
+    recognitionRef.current = rec;
+    rec.lang = "en-US"; rec.interimResults = false; rec.maxAlternatives = 1;
+    setMicActive(true);
+    rec.onresult = (e: any) => {
+      const text = e.results?.[0]?.[0]?.transcript ?? "";
+      if (panel === "guests")   { const n = parseGuest(text);      if (n !== null) setGuests(n); }
+      if (panel === "datetime") { const t = parseTimeVoice(text);   if (t)          setTime(t);  }
+      if (panel === "budget")   { const b = parseBudgetVoice(text); if (b !== null) setBudget(b); }
+    };
+    rec.onerror = () => {};
+    rec.onend   = () => { recognitionRef.current = null; setMicActive(false); };
+    rec.start();
+  };
 
   const panel = PANELS[panelIdx];
 
@@ -594,6 +637,18 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
           >
             {QUESTIONS[panel]}
           </motion.p>
+
+          {/* In-character hint */}
+          {panel !== "address" && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 13, color: "rgba(255,255,255,0.32)", textAlign: "center", margin: "8px 0 0", letterSpacing: 0.2 }}
+            >
+              tap to select — or speak
+            </motion.p>
+          )}
 
           {/* Content area */}
           <div style={{ flex: 1, marginTop: 28, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -806,6 +861,30 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
         </motion.div>
       </AnimatePresence>
 
+
+      {/* ── Mic button (all panels except address) ─────────────────────────── */}
+      <AnimatePresence>
+        {panel !== "address" && (
+          <motion.div
+            key={`mic-${panel}`}
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.32 }}
+            style={{ position: "absolute", bottom: 28, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, zIndex: 10 }}
+          >
+            <motion.button
+              onClick={handleVoice}
+              animate={micActive ? { scale: [1, 1.12, 1], backgroundColor: "#cc2222" } : { backgroundColor: "rgba(255,255,255,0.1)" }}
+              transition={micActive ? { duration: 0.9, repeat: Infinity } : { duration: 0.2 }}
+              style={{ width: 52, height: 52, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.25)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <div style={{ width: 18, height: 25 }}><MicIcon color="white" /></div>
+            </motion.button>
+            <p style={{ fontFamily: "Spectral, serif", fontStyle: "italic", fontSize: 11, color: "rgba(255,255,255,0.28)", margin: 0, letterSpacing: 0.4 }}>
+              {micActive ? "Listening…" : "or speak your answer"}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Slider styles */}
       <style>{`

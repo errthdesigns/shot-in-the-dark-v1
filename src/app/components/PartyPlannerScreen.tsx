@@ -441,9 +441,14 @@ export function PartyPlannerScreen() {
   // Steps that become AI-driven because the user spoke (so they show thinking dots)
   const [dynamicSteps, setDynamicSteps]     = useState<Set<number>>(new Set());
   // Multi-turn flavor conversation state
-  const [flavorTurns, setFlavorTurns]       = useState(0);   // how many user turns done on step 4
-  // Image tile tap on step 4 — feeds into the transcribing pipeline just like mic
+  const [flavorTurns, setFlavorTurns]       = useState(0);   // how many user turns done on step 5
+  // Image tile tap on step 5 — feeds into the transcribing pipeline just like mic
   const [pendingFlavorInput, setPendingFlavorInput] = useState<string | null>(null);
+  // Text input overlay
+  const [typeInputOpen, setTypeInputOpen]   = useState(false);
+  const [typeInputValue, setTypeInputValue] = useState("");
+  // Free chat step turn counter
+  const [freeChatTurns, setFreeChatTurns]   = useState(0);
 
   const typeTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const thinkTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -457,6 +462,8 @@ export function PartyPlannerScreen() {
   const convHistoryRef     = useRef<ConvMessage[]>([]);
   // Ref mirror of flavorTurns so Effect 4 closure never goes stale
   const flavorTurnsRef     = useRef(0);
+  // Ref mirror of freeChatTurns so Effect 4 closure never goes stale
+  const freeChatTurnsRef   = useRef(0);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -476,6 +483,8 @@ export function PartyPlannerScreen() {
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
+
+  const flavorGalleryImages = current.view === "flavor-pick" ? FLAVOR_OPTIONS.map(o => o.src) : [];
 
   // ── Build tile slots ────────────────────────────────────────────────────────
   const tileSlots: TileSlot[] = [];
@@ -562,10 +571,11 @@ export function PartyPlannerScreen() {
   }
 
   // Keep refs in sync so Effect 4 closures never go stale
-  useEffect(() => { convHistoryRef.current  = convHistory;  }, [convHistory]);
-  useEffect(() => { flavorTurnsRef.current  = flavorTurns;  }, [flavorTurns]);
+  useEffect(() => { convHistoryRef.current     = convHistory;    }, [convHistory]);
+  useEffect(() => { flavorTurnsRef.current     = flavorTurns;    }, [flavorTurns]);
+  useEffect(() => { freeChatTurnsRef.current   = freeChatTurns;  }, [freeChatTurns]);
 
-  // Image tile tap on step 4 → feed into the same transcribing pipeline as mic
+  // Image tile tap on step 5 → feed into the same transcribing pipeline as mic
   useEffect(() => {
     if (!pendingFlavorInput || phase !== "ready" || step !== FLAVOR_PICK_STEP) return;
     voiceTranscriptRef.current = pendingFlavorInput;
@@ -703,14 +713,46 @@ export function PartyPlannerScreen() {
     const afterType = () => {
       setIsUserTyping(false);
 
-      // ── Flavor conversation (step 4) — multi-turn before advancing ────────────
+      // ── Free chat step (step 3) — multi-turn before advancing ─────────────────
+      if (step === 3) {
+        const turns = freeChatTurnsRef.current;
+        const history = convHistoryRef.current;
+        const msgs: ConvMessage[] = [...history, { role: "user", content: uText }];
+
+        if (turns < 2) {
+          // Host asks a follow-up (stays on step 3)
+          setFreeChatTurns(t => t + 1);
+          freeChatTurnsRef.current = turns + 1;
+
+          const systemNote = turns === 1
+            ? "[System: this is your last follow-up before you say you have the vibe and ask if they're ready to see the night you've designed for them]"
+            : "[System: ask ONE curious follow-up about what they just said]";
+
+          const followUpMsgs: ConvMessage[] = [...msgs, { role: "user", content: systemNote }];
+          hostChat(followUpMsgs).then(raw => {
+            if (cancelled) return;
+            const followUp = raw || (turns === 1 ? "I have your vibe nailed.\n\nAre you ready for me to reveal your evening?" : "Tell me more…");
+            setAiGeneratedSteps(prev => ({ ...prev, 3: followUp }));
+            setConvHistory([...msgs, { role: "assistant", content: followUp }]);
+            setUserDisplay("");
+            setPhase("ai_typing");
+          });
+        } else {
+          // 3rd user response — advance to vibe reveal (step 4)
+          setConvHistory(msgs);
+          advanceTimerRef.current = setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 520);
+        }
+        return;
+      }
+
+      // ── Flavor conversation (step 5) — multi-turn before advancing ────────────
       if (step === FLAVOR_PICK_STEP) {
         const turns = flavorTurnsRef.current;
         const history = convHistoryRef.current;
         const msgs: ConvMessage[] = [...history, { role: "user", content: uText }];
 
         if (turns === 0) {
-          // First flavor turn: Host asks a follow-up, stays on step 4
+          // First flavor turn: Host asks a follow-up, stays on step 5
           setFlavorTurns(1);
           flavorTurnsRef.current = 1;
           // Ask Claude for one more question before assigning the bottle
@@ -727,13 +769,13 @@ export function PartyPlannerScreen() {
             setPhase("ai_typing");
           });
         } else {
-          // Second flavor turn: assign the bottle and advance to step 5
+          // Second flavor turn: assign the bottle and advance to step 6
           hostChat(msgs).then(raw => {
             if (cancelled) return;
             const bottle = extractBottle(raw || "reposado");
             const display = stripBottleLine(raw || FALLBACK_BOTTLE) || FALLBACK_BOTTLE;
             setAiBottle(bottle);
-            setAiGeneratedSteps(prev => ({ ...prev, 5: display }));
+            setAiGeneratedSteps(prev => ({ ...prev, 6: display }));
             setConvHistory([...msgs, { role: "assistant", content: raw || display }]);
             setStep(prev => Math.min(prev + 1, STEPS.length - 1));
           });
@@ -769,33 +811,30 @@ export function PartyPlannerScreen() {
     });
   }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect: fetch vibe from Claude when entering step 3 ──────────────────────
+  // ── Effect: fetch vibe from Claude when entering step 4 ──────────────────────
   useEffect(() => {
     if (introActive || videoActive || nameActive || infoGatherActive) return;
-    if (step !== 3 || aiGeneratedSteps[3]) return;
+    if (step !== 4 || aiGeneratedSteps[4]) return;
     if (!partyDetails) return;
     let cancelled = false;
-    // If voice conversation built up history through steps 0-2, continue it;
-    // otherwise seed a fresh context from partyDetails (InfoGather flow)
-    const voiceCtx = userVoiceInputsRef.current.length > 0
-      ? ` The guest also said: "${userVoiceInputsRef.current.join(" / ")}".`
-      : "";
+    // The convHistory already contains free chat turns from step 3 (if voice flow).
+    // If InfoGather flow (no conv history), seed a fresh context from partyDetails.
     const detailsMsg = `Confirmed details: ${partyDetails.guests} guests, ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}. Now set the vibe.`;
     const msgs: ConvMessage[] = convHistory.length > 0
       ? [...convHistory, { role: "user", content: detailsMsg }]
-      : [{ role: "user", content: `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.${voiceCtx}` }];
+      : [{ role: "user", content: `I'm planning a night for ${partyDetails.guests} guests on ${partyDetails.date} at ${partyDetails.time}. Budget: $${partyDetails.budgetPerHead} per head. Location: ${partyDetails.area}.` }];
     hostChat(msgs).then(raw => {
       if (cancelled) return;
       const text = raw || FALLBACK_VIBE;
-      setAiGeneratedSteps(prev => ({ ...prev, 3: text }));
+      setAiGeneratedSteps(prev => ({ ...prev, 4: text }));
       setConvHistory([...msgs, { role: "assistant", content: text }]);
     });
     return () => { cancelled = true; };
   }, [step, partyDetails, aiGeneratedSteps, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect: fetch flavour question from Claude when entering step 4 ──────────
+  // ── Effect: fetch flavour question from Claude when entering step 5 ──────────
   useEffect(() => {
-    if (step !== 4 || aiGeneratedSteps[4]) return;
+    if (step !== 5 || aiGeneratedSteps[5]) return;
     if (convHistory.length === 0) return;
     let cancelled = false;
     const msgs: ConvMessage[] = [
@@ -805,7 +844,7 @@ export function PartyPlannerScreen() {
     hostChat(msgs).then(raw => {
       if (cancelled) return;
       const text = raw || FALLBACK_FLAVOUR;
-      setAiGeneratedSteps(prev => ({ ...prev, 4: text }));
+      setAiGeneratedSteps(prev => ({ ...prev, 5: text }));
       setConvHistory([...msgs, { role: "assistant", content: text }]);
     });
     return () => { cancelled = true; };
@@ -860,8 +899,13 @@ export function PartyPlannerScreen() {
     recognition.start();
   };
 
-  const handleCocktailComplete = () => {
-    setStep(s => Math.min(s + 1, STEPS.length - 1));
+  const handleTypeSubmit = () => {
+    const text = typeInputValue.trim();
+    if (!text || phase !== "ready") return;
+    setTypeInputOpen(false);
+    setTypeInputValue("");
+    voiceTranscriptRef.current = text;
+    setPhase("transcribing");
   };
 
   const handleContinue = () => {
@@ -881,7 +925,7 @@ export function PartyPlannerScreen() {
   const isFlavorPick    = current.view === "flavor-pick";
 
   return (
-    <div onClick={handleMicClick} style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
+    <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
 
       {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
       <AnimatePresence>
@@ -902,7 +946,16 @@ export function PartyPlannerScreen() {
             transition={{ duration: 1.1, ease: "easeInOut" }}
             style={{ position: "absolute", inset: 0 }}
           >
-            <AutoGallery images={currentGalleryImages} speed={1.8} visibleCount={6} tileSlots={tileSlots} />
+            <AutoGallery
+              images={showGallery ? (flavorGalleryImages.length > 0 ? flavorGalleryImages : currentGalleryImages) : []}
+              speed={1.8}
+              visibleCount={6}
+              tileSlots={tileSlots}
+              onImageTap={current.view === "flavor-pick" && phase === "ready" ? (imgIdx) => {
+                const opt = FLAVOR_OPTIONS[imgIdx % FLAVOR_OPTIONS.length];
+                setPendingFlavorInput(`I'm drawn to ${opt.label.toLowerCase()}`);
+              } : undefined}
+            />
             {/* Only apply darkening overlays when we have background photos — void steps stay pure black */}
             {currentGalleryImages.length > 0 && (
               <>
@@ -954,44 +1007,20 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Flavor picker (step 4) — tappable image tiles ────────────────────── */}
+      {/* ── Flavor hint label (step 5) ───────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "flavor-pick" && phase === "ready" && (
           <motion.div
-            key="flavor-ui"
+            key="flavor-hint"
             initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.55, ease: "easeOut" }}
-            style={{ position: "absolute", left: 0, right: 0, bottom: 68, zIndex: 30, pointerEvents: "none" }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 90, zIndex: 30, pointerEvents: "none" }}
           >
-            {/* Hint label */}
-            <p style={{ fontFamily: "Spectral, serif", fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", margin: "0 0 10px", letterSpacing: 0.4, pointerEvents: "none" }}>
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", margin: 0, letterSpacing: 0.4 }}>
               tap a flavour — or speak
             </p>
-            {/* Two rows of 3 image tiles */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, padding: "0 20px", pointerEvents: "auto" }}>
-              {FLAVOR_OPTIONS.map(opt => (
-                <motion.button
-                  key={opt.id}
-                  onClick={(e) => { e.stopPropagation(); setPendingFlavorInput(`I'm drawn to ${opt.label.toLowerCase()}`); }}
-                  whileTap={{ scale: 0.92, opacity: 0.7 }}
-                  style={{ position: "relative", aspectRatio: "1", borderRadius: 14, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.22)", cursor: "pointer", background: "none", padding: 0 }}
-                >
-                  <img src={opt.src} alt={opt.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  {/* Label overlay */}
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%)", borderRadius: 14 }} />
-                  <span style={{ position: "absolute", bottom: 7, left: 0, right: 0, textAlign: "center", fontFamily: "Spectral, serif", fontSize: 11, color: "white", letterSpacing: 0.3, fontWeight: 500 }}>
-                    {opt.label}
-                  </span>
-                </motion.button>
-              ))}
-            </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* ── Cocktail video ───────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {current.view === "cocktail" && <CocktailCard key="cocktail" onComplete={handleCocktailComplete} />}
       </AnimatePresence>
 
       {/* ── AI thinking dots ─────────────────────────────────────────────────── */}
@@ -1022,6 +1051,22 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
+      {/* ── User text bubble ─────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {userDisplay && !isPaymentView && (
+          <motion.div
+            key="user-bubble"
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.22 }}
+            style={{ position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", maxWidth: 320, textAlign: "center", zIndex: 20 }}
+          >
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: "rgba(255,255,255,0.72)", lineHeight: 1.35, margin: 0, fontStyle: "italic" }}>
+              <UserText text={userDisplay} />
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Step indicator pills ─────────────────────────────────────────────── */}
       <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
         {STEPS.map((_, i) => (
@@ -1032,6 +1077,110 @@ export function PartyPlannerScreen() {
           />
         ))}
       </div>
+
+      {/* ── Bottom control bar ───────────────────────────────────────────────── */}
+      {!introActive && !videoActive && !nameActive && !infoGatherActive && !isPaymentView && (
+        <div
+          style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 18, zIndex: 50 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* X button — abort / reset */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (phase === "recording") {
+                try { recognitionRef.current?.abort(); } catch { /* ignore */ }
+                recognitionRef.current = null;
+                setPhase("ready");
+              } else {
+                setStep(0);
+              }
+            }}
+            style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <XIcon />
+          </button>
+
+          {/* Mic button — center */}
+          <button
+            onClick={(e) => { e.stopPropagation(); handleMicClick(); }}
+            style={{ width: 56, height: 56, borderRadius: "50%", background: phase === "recording" ? "transparent" : "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "visible" }}
+          >
+            {phase === "recording" ? (
+              <motion.div
+                animate={{ scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "#cc2222", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <div style={{ width: 20, height: 28 }}><MicIcon color="white" /></div>
+              </motion.div>
+            ) : phase === "transcribing" ? (
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                {[0, 1, 2].map((i) => (
+                  <motion.div key={i}
+                    style={{ width: 5, height: 5, borderRadius: "50%", backgroundColor: "#000" }}
+                    animate={{ y: [-3, 3, -3], opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 0.6, delay: i * 0.12, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div style={{ width: 20, height: 28 }}><MicIcon color="black" /></div>
+            )}
+          </button>
+
+          {/* Keyboard button — open text input */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setTypeInputOpen(true); }}
+            style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <GridIcon />
+          </button>
+        </div>
+      )}
+
+      {/* ── Text input overlay ───────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {typeInputOpen && (
+          <motion.div
+            key="type-input"
+            initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            style={{
+              position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 200,
+              background: "rgba(10,10,10,0.97)", borderRadius: "18px 18px 0 0",
+              padding: "20px 16px 32px"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input
+                autoFocus
+                value={typeInputValue}
+                onChange={(e) => setTypeInputValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleTypeSubmit(); }}
+                placeholder="Type your response…"
+                style={{
+                  flex: 1, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: 24, padding: "12px 18px", fontFamily: "Spectral, serif",
+                  fontSize: 16, color: "white", outline: "none"
+                }}
+              />
+              <button
+                onClick={handleTypeSubmit}
+                style={{
+                  width: 44, height: 44, borderRadius: "50%", background: "white",
+                  border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M9 14V4M9 4L4 9M9 4L14 9" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Debug back button ────────────────────────────────────────────────── */}
       {step > 0 && (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
 import { hostChat, extractBottle, stripBottleLine, ConvMessage } from "../services/claude";
@@ -488,7 +488,12 @@ export function PartyPlannerScreen() {
     current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
 
-  const flavorGalleryImages = current.view === "flavor-pick" ? FLAVOR_OPTIONS.map(o => o.src) : [];
+  // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
+  // and would cancel/restart (resetting all planes) if this was a new array each render
+  const flavorGalleryImages = useMemo(
+    () => current.view === "flavor-pick" ? FLAVOR_OPTIONS.map(o => o.src) : [],
+    [current.view] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // ── Build tile slots ────────────────────────────────────────────────────────
   const tileSlots: TileSlot[] = [];
@@ -567,6 +572,13 @@ export function PartyPlannerScreen() {
   useEffect(() => { convHistoryRef.current     = convHistory;    }, [convHistory]);
   useEffect(() => { flavorTurnsRef.current     = flavorTurns;    }, [flavorTurns]);
   useEffect(() => { freeChatTurnsRef.current   = freeChatTurns;  }, [freeChatTurns]);
+
+  // Reset free-chat turn counter each time step 3 is entered (back nav safety)
+  useEffect(() => {
+    if (step !== 3) return;
+    setFreeChatTurns(0);
+    freeChatTurnsRef.current = 0;
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Image tile tap on step 5 → feed into the same transcribing pipeline as mic
   useEffect(() => {

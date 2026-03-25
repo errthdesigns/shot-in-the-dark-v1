@@ -604,13 +604,12 @@ export function PartyPlannerScreen() {
     return clearThink;
   }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When AI text arrives for the current step, start typing
-  // Handles both "thinking" (normal path) and "ready" (text arrived late, after phase moved on)
+  // When AI text arrives for the current step, start typing (only from "thinking" phase)
   useEffect(() => {
     if (!AI_STEPS.has(step) && !dynamicSteps.has(step)) return;
     if (!aiGeneratedSteps[step]) return;
-    if (phase !== "thinking" && phase !== "ready") return;
-    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), phase === "ready" ? 200 : 600);
+    if (phase !== "thinking") return;
+    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
     return clearThink;
   }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 

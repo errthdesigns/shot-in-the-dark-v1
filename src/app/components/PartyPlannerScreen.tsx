@@ -672,7 +672,10 @@ export function PartyPlannerScreen() {
         return;
       }
       i++;
-      setAiDisplay(text.slice(0, i));
+      // Only show text after the last paragraph break — clears old text as new arrives
+      const soFar = text.slice(0, i);
+      const lastBreak = soFar.lastIndexOf("\n\n");
+      setAiDisplay(lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar);
       const c = text[i - 1];
       let d = 34;
       if (c === "." || c === "!" || c === "?") d = 300;
@@ -1209,18 +1212,6 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Debug back button ────────────────────────────────────────────────── */}
-      {step > 0 && (
-        <button
-          onClick={() => setStep((s) => Math.max(s - 1, 0))}
-          style={{ position: "absolute", top: 14, left: 16, display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 20, padding: "5px 11px 5px 8px", cursor: "pointer", zIndex: 100 }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M8 1L3 6L8 11" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <span style={{ fontFamily: "Inter, sans-serif", fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 1.2 }}>{step - 1} ← {step}</span>
-        </button>
-      )}
 
       <style>{`
         @keyframes blink      { 0%,100%{opacity:1} 50%{opacity:0} }

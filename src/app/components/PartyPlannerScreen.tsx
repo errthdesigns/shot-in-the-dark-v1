@@ -1067,8 +1067,8 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Step indicator pills ─────────────────────────────────────────────── */}
-      <div style={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+      {/* ── Step indicator pills — sit above the control bar ─────────────────── */}
+      <div style={{ position: "absolute", bottom: 84, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
         {STEPS.map((_, i) => (
           <motion.div key={i}
             animate={{ width: i === step ? 14 : 4, backgroundColor: i === step ? "#ffffff" : "rgba(255,255,255,0.22)" }}

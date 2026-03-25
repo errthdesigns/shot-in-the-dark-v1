@@ -38,8 +38,10 @@ export function NameScreen({ onComplete }: Props) {
   const [aiDisplay, setAiDisplay] = useState("");
   const [punDisplay, setPunDisplay] = useState("");
   const [nameInput, setNameInput] = useState("");
+  const [micActive, setMicActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const cancelledRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
 
   // Phase 1: Type the AI question + speak it
   useEffect(() => {
@@ -118,6 +120,40 @@ export function NameScreen({ onComplete }: Props) {
     setPhase("pun_typing");
   };
 
+  const handleMic = () => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) { inputRef.current?.focus(); return; }
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setMicActive(true);
+
+    recognition.onresult = (event: any) => {
+      const transcript = (event.results?.[0]?.[0]?.transcript ?? "").trim();
+      if (transcript) {
+        setNameInput(transcript);
+        setTimeout(() => {
+          setPhase("pun_typing");
+        }, 200);
+      }
+    };
+    recognition.onerror = () => { /* fall through to onend */ };
+    recognition.onend = () => {
+      recognitionRef.current = null;
+      setMicActive(false);
+    };
+    recognition.start();
+  };
+
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <AudioReactiveGradient />
@@ -193,10 +229,11 @@ export function NameScreen({ onComplete }: Props) {
             style={{
               position: "absolute",
               left: 20, right: 20,
-              top: 688,
+              top: 580,
               zIndex: 10,
             }}
           >
+            {/* Input row */}
             <div style={{
               backgroundColor: "rgba(255,255,255,0.07)",
               border: "1px solid rgba(151,21,26,0.7)",
@@ -212,7 +249,7 @@ export function NameScreen({ onComplete }: Props) {
                 value={nameInput}
                 onChange={e => setNameInput(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && submit()}
-                placeholder="Your name..."
+                placeholder="Type your name…"
                 style={{
                   flex: 1,
                   background: "transparent",
@@ -224,7 +261,38 @@ export function NameScreen({ onComplete }: Props) {
                   caretColor: "rgba(151,21,26,0.9)",
                 }}
               />
+              {nameInput.trim() && (
+                <button onClick={submit} style={{ background: "white", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 11V3M7 3L3 7M7 3L11 7" stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              )}
             </div>
+
+            {/* OR speak row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 14, justifyContent: "center" }}>
+              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.12)" }} />
+              <span style={{ fontFamily: "Spectral, serif", fontSize: 12, color: "rgba(255,255,255,0.35)", letterSpacing: 1 }}>or</span>
+              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.12)" }} />
+            </div>
+
+            {/* Mic button */}
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+              <motion.button
+                onClick={handleMic}
+                animate={micActive ? { scale: [1, 1.12, 1], backgroundColor: "#cc2222" } : { backgroundColor: "white" }}
+                transition={micActive ? { duration: 0.9, repeat: Infinity } : { duration: 0.2 }}
+                style={{ width: 56, height: 56, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <div style={{ width: 20, height: 28 }}>
+                  <MicIcon color={micActive ? "white" : "black"} />
+                </div>
+              </motion.button>
+            </div>
+            <p style={{ textAlign: "center", fontFamily: "Spectral, serif", fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 8, letterSpacing: 0.5 }}>
+              {micActive ? "Listening…" : "Tap to speak"}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

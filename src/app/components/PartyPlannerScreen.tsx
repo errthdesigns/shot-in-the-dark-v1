@@ -46,13 +46,36 @@ import imgPalomaClubSoda   from "../../assets/soda.png";
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
 import imgGatsbyB from "figma:asset/b700a4bda2ef0ceacaf56b1c8edc736bfaa95522.png";
 
+// ── The Night 1 — western keyword-spawn + gallery images ──────────────────────
+import imgNightHat1       from "../../assets/The Night 1/Cowboy Hat 1.jpg";
+import imgNightHat2       from "../../assets/The Night 1/Cowboy Hat 2.jpg";
+import imgNightHat3       from "../../assets/The Night 1/Cowboy HAt 3.jpg";
+import imgNightBoots      from "../../assets/The Night 1/Cowboy Boots 1.jpg";
+import imgNightDonJulio   from "../../assets/The Night 1/Don Julio Reposado.png";
+import imgNightGrapefruit from "../../assets/The Night 1/Grapefruit.png";
+import imgNightMixer      from "../../assets/The Night 1/Mixer.png";
+import imgNightMostWanted from "../../assets/The Night 1/Most Wanted.jpg";
+import imgNightSaloon1    from "../../assets/The Night 1/Saloon 1.jpg";
+import imgNightSaloon2    from "../../assets/The Night 1/Saloon 2.jpg";
+import imgNightSaloon3    from "../../assets/The Night 1/Saloon 3.jpg";
+import imgNightDress      from "../../assets/The Night 1/Sparkly Dress.jpg";
+import imgNightReposadoCard from "../../assets/The Night 1/reposado-card 10.avif";
+
+// Gallery shown on step 7 ("Take it in") — full western void
+const WESTERN_GALLERY = [
+  imgNightSaloon1, imgNightSaloon2, imgNightSaloon3,
+  imgNightHat1, imgNightHat2, imgNightHat3,
+  imgNightBoots, imgNightMostWanted, imgNightDress,
+  imgNightMixer, imgNightReposadoCard, imgNightDonJulio,
+];
+
 const PARTY_IMAGES      = [imgSafdgdbnf, imgHrsbgfdxVc, img855, img833, imgC9556];
 const DRINK_IMAGES_B    = [imgDrinkD, imgDrinkF, imgDrinkI, imgDrinkJ, imgDrinkK, imgDrinkL];
 // The six Figma-matched spice/bitter images (screen 14/17)
 const DRINK_IMAGES_SPICE = [imgDrinkH, imgDrinkE, imgDrinkB, imgDrinkF, imgDrinkC, imgDrinkG];
 const GATSBY_COMBINED   = [...PARTY_IMAGES, imgDrinkK, imgDrinkI, imgDrinkJ, imgGatsbyA, imgGatsbyB];
 
-// ── Keyword-triggered ingredient images (step 13) ─────────────────────────────
+// ── Keyword-triggered ingredient images ───────────────────────────────────────
 interface IngredientDef {
   keyword: string;
   src: string;
@@ -65,6 +88,18 @@ const INGREDIENT_DEFS: IngredientDef[] = [
   { keyword: "orange",     src: imgDrinkB,               x: 210, y: 339, w: 127, h: 121, radius:  9.131, rotZ: -4.0, cx:  110, cy: -130 },
   { keyword: "strawberry", src: imgIngredientStrawberry, x: 151, y: 456, w: 178, h: 115, radius: 20,     rotZ:  5.0, cx:  -65, cy:  145  },
   { keyword: "raspberry",  src: imgDrinkA,               x:  51, y: 295, w: 127, h: 161, radius: 20,     rotZ: -6.5, cx: -150, cy:  -70  },
+];
+
+// ── Western keyword-spawn defs — images fly in as LLM narrates step 6 ─────────
+// keywords matched against aiDisplay.toLowerCase() as text types
+const WESTERN_DEFS: IngredientDef[] = [
+  { keyword: "hat",        src: imgNightHat1,          x: 0, y: 0, w: 200, h: 155, radius: 14, rotZ: -4.5, cx:  -10, cy: -185 },
+  { keyword: "boots",      src: imgNightBoots,         x: 0, y: 0, w: 175, h: 145, radius: 14, rotZ:  6.2, cx:  115, cy:  110 },
+  { keyword: "saloon",     src: imgNightSaloon1,       x: 0, y: 0, w: 200, h: 152, radius: 14, rotZ: -3.1, cx: -105, cy:   45 },
+  { keyword: "most wanted",src: imgNightMostWanted,    x: 0, y: 0, w: 145, h: 185, radius: 14, rotZ:  3.4, cx: -135, cy:  -90 },
+  { keyword: "don julio",  src: imgNightDonJulio,      x: 0, y: 0, w: 120, h: 190, radius: 14, rotZ:  5.1, cx:   70, cy:  170 },
+  { keyword: "reposado",   src: imgNightReposadoCard,  x: 0, y: 0, w: 170, h: 130, radius: 14, rotZ: -5.8, cx:  -55, cy:  155 },
+  { keyword: "grapefruit", src: imgNightGrapefruit,    x: 0, y: 0, w: 130, h: 130, radius: 65, rotZ:  7.3, cx:  145, cy:  -80 },
 ];
 
 // ── Flavor picker options ─────────────────────────────────────────────────────
@@ -109,9 +144,9 @@ const STEPS: Step[] = [
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 5 — AI flavour question (AI-generated, flavor-pick view with void gallery)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "flavor-pick" },
-  // 6 — AI bottle assignment (AI-generated, speechAdvance)
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 7 — void gallery reveal
+  // 6 — AI bottle assignment (AI-generated, speechAdvance) — western keywords spawn images
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 7 — western void gallery reveal
   { aiText: "Take it in.\n\nWhen you're ready… say the word.", aiY: 85, userText: "Let's go.", imgState: "full", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 8 — shopping cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
@@ -124,7 +159,7 @@ const AI_STEPS = new Set([4, 5, 6]);
 
 const FALLBACK_VIBE    = "Something is already taking shape.\n\nI'll set the tone before anyone realises what's happening.";
 const FALLBACK_FLAVOUR = "Now let's talk about what's in the glass.\n\nDo you want something smooth and refined… or something bitter and complex?\n\nTell me what draws you.";
-const FALLBACK_BOTTLE  = "Based on what we've built…\n\nThis is a Western Noir night, fuelled by Don Julio Reposado.\n\nBOTTLE: reposado";
+const FALLBACK_BOTTLE  = "Don your hat.\n\nLace up your boots.\n\nHead to the saloon.\n\nThis is a Western Noir night, fuelled by Don Julio Reposado.\n\nBOTTLE: reposado";
 
 // Fallbacks for dynamically-generated steps 1 & 2
 const FALLBACK_STEP1   = "Good. And what night are we talking?";
@@ -488,6 +523,7 @@ export function PartyPlannerScreen() {
     current.view === "flavor-pick"        ? [] :
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
     current.imgState === "keyword-reveal" ? [] :
+    step === 7                            ? WESTERN_GALLERY :
     PARTY_IMAGES;
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
@@ -510,10 +546,11 @@ export function PartyPlannerScreen() {
   if (current.showDateTile) {
     tileSlots.push({ id: "date", x:  92,  y: 145, rotZ: 4, w: 86, h: 102, children: <DateTileContent /> });
   }
-  // ── Ingredient TileSlots — fly through the 3D void exactly like gallery cards ──
-  // AutoGallery anchor: x=201, y=420  →  cx = x + w/2 - 201,  cy = y + h/2 - 420
+  // ── Keyword TileSlots — fly through the 3D void exactly like gallery cards ──
+  // Step 6 uses WESTERN_DEFS (bottle reveal); other steps use INGREDIENT_DEFS
   if (current.imgState === "keyword-reveal") {
-    INGREDIENT_DEFS.forEach((def) => {
+    const activeDefs = step === 6 ? WESTERN_DEFS : INGREDIENT_DEFS;
+    activeDefs.forEach((def) => {
       if (!revealedKeywords.has(def.keyword)) return;
       tileSlots.push({
         id: `kr-img-${def.keyword}`, x: def.cx, y: def.cy, rotZ: def.rotZ,
@@ -792,7 +829,7 @@ export function PartyPlannerScreen() {
           // Second pick (heat/sweet) — assign bottle and advance
           const bottleMsgs: ConvMessage[] = [
             ...msgs,
-            { role: "user", content: "[System: Based on everything you know about this guest, name their night and assign the bottle. Format EXACTLY as: 'Based on what we've built…\\n\\nThis is a [evocative 2-3 word theme] night, fuelled by Don Julio [Reposado|Cristalino|Blanco].\\n\\nBOTTLE: reposado' (or cristalino/blanco). 2 sentences max. Stay in character.]" },
+            { role: "user", content: "[System: Reveal their night. Write 3-4 short punchy lines in second person, building up to the bottle reveal. Weave in physical western imagery — use the exact words 'hat', 'boots', 'saloon' naturally (e.g. 'Don your hat.', 'Head to the saloon.', 'Lace up your boots.'). End with: 'This is a [evocative 2-3 word theme] night, fuelled by Don Julio Reposado.' New line: 'BOTTLE: reposado' (or cristalino/blanco). Short lines. Dark. Cinematic. Stay in character.]" },
           ];
           hostChat(bottleMsgs).then(raw => {
             if (cancelled) return;
@@ -821,19 +858,21 @@ export function PartyPlannerScreen() {
     return () => { cancelled = true; clearType(); clearAdvance(); };
   }, [phase, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 5: keyword-triggered ingredient reveal (step 13) ──────────────────
+  // ── Effect 5: keyword-triggered image reveal ─────────────────────────────────
+  // Step 6 → WESTERN_DEFS (bottle narration); other keyword-reveal steps → INGREDIENT_DEFS
   useEffect(() => {
     if (current.imgState !== "keyword-reveal") return;
+    const defsToCheck = step === 6 ? WESTERN_DEFS : INGREDIENT_DEFS;
     const lower = aiDisplay.toLowerCase();
     setRevealedKeywords((prev) => {
       let changed = false;
       const next = new Set(prev);
-      for (const def of INGREDIENT_DEFS) {
+      for (const def of defsToCheck) {
         if (!next.has(def.keyword) && lower.includes(def.keyword)) { next.add(def.keyword); changed = true; }
       }
       return changed ? next : prev;
     });
-  }, [aiDisplay, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [aiDisplay, step, current.imgState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect: fetch vibe from Claude when entering step 4 ──────────────────────
   useEffect(() => {

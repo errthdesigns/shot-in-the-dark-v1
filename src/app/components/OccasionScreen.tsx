@@ -109,6 +109,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   // ── Handle completed user response ───────────────────────────────────────
   const handleUserText = (uText: string) => {
     if (!uText.trim()) { setPhase("ready"); return; }
+    cancelledRef.current = false;
     setUserDisplay(uText);
     setLiveTranscript("");
 

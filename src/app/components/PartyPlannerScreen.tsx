@@ -104,7 +104,7 @@ const STEPS: Step[] = [
   // 2 — confirmation (dynamic)
   { aiText: "Got it.\n\nDoes that all sound right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
   // 3 — FREE CHAT — open conversation (multi-turn)
-  { aiText: "Good.\n\nNow tell me about the night itself — what's the energy you're after?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "Good.\n\nNow tell me about the night itself — what's the vibe? Is this a celebration, a reunion, something to impress? What should people feel when they walk in?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 4 — AI vibe reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 5 — AI flavour question (AI-generated, flavor-pick view with void gallery)
@@ -747,12 +747,12 @@ export function PartyPlannerScreen() {
 
           const systemNote = turns === 1
             ? "[System: you have enough now. Tell them in 1-2 sentences that you have the vibe nailed, then ask if they're ready to see the night you've designed. Stay in character — dark, confident, intriguing.]"
-            : "[System: ask ONE specific, curious follow-up that helps you understand the mood or the people involved — e.g. about the occasion, the crowd, what they want people to feel. Make it feel like you're genuinely building their night, not filling in a form. 1-2 lines max.]";
+            : "[System: ask ONE very specific follow-up question about the night. Pick ONE of these angles: who are the people coming (close friends, colleagues, strangers?), what's the occasion or reason for the gathering, what do they want guests to feel when they walk in, or what would make this night unforgettable vs forgettable. Do NOT say 'tell me more' or anything vague. Ask something concrete that shows you're genuinely building their night. 1-2 sentences max, dark and intriguing tone.]";
 
           const followUpMsgs: ConvMessage[] = [...msgs, { role: "user", content: systemNote }];
           hostChat(followUpMsgs).then(raw => {
             if (cancelled) return;
-            const followUp = raw || (turns === 1 ? "I have your vibe nailed.\n\nAre you ready for me to reveal your evening?" : "Tell me more…");
+            const followUp = raw || (turns === 1 ? "I have what I need.\n\nAre you ready to see the night I've built for you?" : "Who are these people to you — and what do you want them to feel before the night is over?");
             setAiGeneratedSteps(prev => ({ ...prev, 3: followUp }));
             setConvHistory([...msgs, { role: "assistant", content: followUp }]);
             setUserDisplay("");

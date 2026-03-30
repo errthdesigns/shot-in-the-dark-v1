@@ -104,7 +104,7 @@ const STEPS: Step[] = [
   // 2 — confirmation (dynamic)
   { aiText: "Got it.\n\nDoes that all sound right to you?", aiY: 85, userText: "sounds great!", imgState: "full", guestCount: 6, showTimeTile: true, showDateTile: true, view: "chat" },
   // 3 — FREE CHAT — open conversation (multi-turn)
-  { aiText: "Good.\n\nAnything else I should know about the night?", aiY: 85, userText: "I just bought new cowboy boots I want to wear!", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "Good.\n\nNow tell me about the night itself — what's the energy you're after?", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   // 4 — AI vibe reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 5 — AI flavour question (AI-generated, flavor-pick view with void gallery)
@@ -722,6 +722,8 @@ export function PartyPlannerScreen() {
     setUserDisplay(""); setIsUserTyping(true);
     if (!uText) {
       setIsUserTyping(false);
+      // Step 3 (free chat) requires real input — don't silently skip
+      if (step === 3) { setPhase("ready"); return; }
       advanceTimerRef.current = setTimeout(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 300);
       return clearAdvance;
     }
@@ -744,8 +746,8 @@ export function PartyPlannerScreen() {
           freeChatTurnsRef.current = turns + 1;
 
           const systemNote = turns === 1
-            ? "[System: this is your last follow-up before you say you have the vibe and ask if they're ready to see the night you've designed for them]"
-            : "[System: ask ONE curious follow-up about what they just said]";
+            ? "[System: you have enough now. Tell them in 1-2 sentences that you have the vibe nailed, then ask if they're ready to see the night you've designed. Stay in character — dark, confident, intriguing.]"
+            : "[System: ask ONE specific, curious follow-up that helps you understand the mood or the people involved — e.g. about the occasion, the crowd, what they want people to feel. Make it feel like you're genuinely building their night, not filling in a form. 1-2 lines max.]";
 
           const followUpMsgs: ConvMessage[] = [...msgs, { role: "user", content: systemNote }];
           hostChat(followUpMsgs).then(raw => {
@@ -1088,9 +1090,9 @@ export function PartyPlannerScreen() {
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.22 }}
-            style={{ position: "absolute", bottom: 90, left: "50%", transform: "translateX(-50%)", maxWidth: 320, textAlign: "center", zIndex: 20 }}
+            style={{ position: "absolute", bottom: 90, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 20 }}
           >
-            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.72)", lineHeight: 1.35, margin: 0, fontStyle: "italic" }}>
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.72)", lineHeight: 1.35, margin: 0, fontStyle: "italic", textAlign: "center", maxWidth: 300 }}>
               {liveTranscript && !userDisplay ? liveTranscript : <UserText text={userDisplay} />}
             </p>
           </motion.div>

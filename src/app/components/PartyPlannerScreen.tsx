@@ -34,12 +34,23 @@ import imgDrinkI from "figma:asset/cfa68884a3f8e09e7e4c165c86b42b8d9d23664a.png"
 import imgDrinkJ from "figma:asset/33e25f39a0f2e453dfd6bfa208f332f644a2da71.png";
 import imgDrinkK from "figma:asset/5b873ac3b3d33a7fc5b92bb7718e0bacd44d94b3.png";
 import imgDrinkL from "figma:asset/5d7e916fcf23b5e34746902373fb092a3decd6e7.png";
-// Reposado Paloma ingredient images — used in FlavorSuggest (screen 8)
+// Reposado Paloma ingredient images — used in recipe card
 import imgPalomaGrapefruit from "../../assets/Grapefruit.png";
 import imgPalomaLime       from "../../assets/Lime.png";
 import imgPalomaAgave      from "../../assets/Agave.png";
 import imgPalomaCilantro   from "../../assets/Cilantro.png";
 import imgPalomaClubSoda   from "../../assets/soda.png";
+
+// ── Cocktail builder ingredient images (keyword-spawn during cocktail chat) ───
+import imgCocktailBitter     from "../../assets/Cocktail/Bitter Cocktail.jpg";
+import imgCocktailChilli     from "../../assets/Cocktail/Chilli.jpg";
+import imgCocktailGrapefruit from "../../assets/Cocktail/Grapefruit.jpg";
+import imgCocktailHoney      from "../../assets/Cocktail/Honey.jpg";
+import imgCocktailLemon      from "../../assets/Cocktail/Lemon.jpg";
+import imgCocktailLime       from "../../assets/Cocktail/Lime.jpg";
+import imgCocktailMint       from "../../assets/Cocktail/Mint.jpg";
+import imgCocktailSour       from "../../assets/Cocktail/Sour Cocktail.jpg";
+import imgCocktailSweet      from "../../assets/Cocktail/Sweet Cocktail.jpg";
 
 // ── Final reveal: orange video frame ─────────────────────────────────────────
 
@@ -103,21 +114,24 @@ const WESTERN_DEFS: IngredientDef[] = [
   { keyword: "grapefruit", src: imgNightGrapefruit,    x: 0, y: 0, w: 130, h: 130, radius: 65, rotZ:  7.3, cx:  145, cy:  -80 },
 ];
 
-// ── Cocktail keyword-spawn defs — images appear as user/LLM mentions flavours ─
-// keywords matched against aiDisplay + userDisplay combined (lowercase)
+// ── Cocktail keyword-spawn defs — images fly in as user/LLM mentions flavours ─
+// keywords matched against aiDisplay + userDisplay combined (case-insensitive)
 const COCKTAIL_DEFS: IngredientDef[] = [
   { keyword: "strawberry", src: imgIngredientStrawberry, x:0, y:0, w:170, h:135, radius:14, rotZ:-4.2, cx: -90, cy:  130 },
   { keyword: "raspberry",  src: imgDrinkA,               x:0, y:0, w:150, h:165, radius:14, rotZ: 5.8, cx:  120, cy:  -85 },
-  { keyword: "citrus",     src: imgDrinkB,               x:0, y:0, w:165, h:145, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
-  { keyword: "grapefruit", src: imgNightGrapefruit,      x:0, y:0, w:130, h:130, radius:65, rotZ: 6.5, cx:  140, cy:  -60 },
-  { keyword: "lime",       src: imgPalomaLime,            x:0, y:0, w:130, h:130, radius:65, rotZ:-5.9, cx: -135, cy: -100 },
-  { keyword: "spic",       src: imgDrinkH,                x:0, y:0, w:165, h:145, radius:14, rotZ: 4.1, cx:  -80, cy:  165 },
-  { keyword: "smok",       src: imgDrinkC,                x:0, y:0, w:175, h:145, radius:14, rotZ:-6.2, cx:   90, cy:  155 },
-  { keyword: "fruity",     src: imgDrinkI,                x:0, y:0, w:155, h:165, radius:14, rotZ: 3.7, cx: -150, cy:   50 },
-  { keyword: "sweet",      src: imgDrinkF,                x:0, y:0, w:150, h:135, radius:14, rotZ:-3.9, cx:   60, cy:  100 },
-  { keyword: "bitter",     src: imgDrinkE,                x:0, y:0, w:160, h:145, radius:14, rotZ: 5.2, cx:  -50, cy: -145 },
-  { keyword: "mint",       src: imgDrinkJ,                x:0, y:0, w:145, h:155, radius:14, rotZ: 6.8, cx:  110, cy:  155 },
-  { keyword: "dark",       src: imgDrinkD,                x:0, y:0, w:160, h:140, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
+  { keyword: "lemon",      src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ:-3.1, cx:  -30, cy: -175 },
+  { keyword: "citrus",     src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ: 4.3, cx:  145, cy: -120 },
+  { keyword: "grapefruit", src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ:-5.9, cx: -135, cy:  -95 },
+  { keyword: "lime",       src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ: 4.1, cx:   60, cy:  170 },
+  { keyword: "chilli",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 3.8, cx:  -80, cy:  160 },
+  { keyword: "spic",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
+  { keyword: "honey",      src: imgCocktailHoney,         x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
+  { keyword: "mint",       src: imgCocktailMint,          x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
+  { keyword: "sweet",      src: imgCocktailSweet,         x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
+  { keyword: "sour",       src: imgCocktailSour,          x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
+  { keyword: "bitter",     src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
+  { keyword: "smok",       src: imgDrinkC,                x:0, y:0, w:175, h:145, radius:14, rotZ:-5.1, cx: -120, cy:  -60 },
+  { keyword: "dark",       src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ: 2.5, cx:  -10, cy:  140 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -640,10 +654,10 @@ export function PartyPlannerScreen() {
       const lastBreak = soFar.lastIndexOf("\n\n");
       setAiDisplay(lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar);
       const c = text[i - 1];
-      let d = 34;
-      if (c === "." || c === "!" || c === "?") d = 300;
-      else if (c === ",") d = 100;
-      else if (c === "\n") d = 400;
+      let d = 72 + Math.random() * 16;
+      if (c === "." || c === "!" || c === "?") d = 520;
+      else if (c === ",") d = 210;
+      else if (c === "\n") d = 500;
       typeTimerRef.current = setTimeout(next, d);
     };
     next();
@@ -942,9 +956,9 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
+      {/* ── AI text (hidden on bottle-select and all overlay screens) ────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isPaymentView && (
+        {!isThinking && aiDisplay && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
@@ -958,7 +972,7 @@ export function PartyPlannerScreen() {
 
       {/* ── User text bubble (live transcript while recording, then typed result) */}
       <AnimatePresence>
-        {(userDisplay || liveTranscript) && !isPaymentView && (
+        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
@@ -973,15 +987,17 @@ export function PartyPlannerScreen() {
       </AnimatePresence>
 
       {/* ── Step indicator pills — sit above the control bar ─────────────────── */}
-      <div style={{ position: "absolute", bottom: 84, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
-        {STEPS.map((_, i) => (
-          <motion.div key={i}
-            animate={{ width: i === step ? 14 : 4, backgroundColor: i === step ? "#ffffff" : "rgba(255,255,255,0.22)" }}
-            transition={{ duration: 0.3 }}
-            style={{ height: 4, borderRadius: 2 }}
-          />
-        ))}
-      </div>
+      {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && (
+        <div style={{ position: "absolute", bottom: 84, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
+          {STEPS.map((_, i) => (
+            <motion.div key={i}
+              animate={{ width: i === step ? 14 : 4, backgroundColor: i === step ? "#ffffff" : "rgba(255,255,255,0.22)" }}
+              transition={{ duration: 0.3 }}
+              style={{ height: 4, borderRadius: 2 }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ── Bottom control bar ───────────────────────────────────────────────── */}
       {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && (

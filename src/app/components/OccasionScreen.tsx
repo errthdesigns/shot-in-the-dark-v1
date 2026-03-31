@@ -31,16 +31,36 @@ const COSTUME_KEYWORDS = /dress|blazer|coat|jacket|hat|cane|goblet|suit|gown|vel
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function getReaction(userText: string): Promise<string> {
-  const msgs: ConvMessage[] = [{ role: "user", content: `Guest said: "${userText}". One sentence reaction.` }];
-  return (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim() ?? "";
+  const msgs: ConvMessage[] = [{ role: "user", content: `Guest said: "${userText}". React in ONE dry sentence, max 12 words. Reference what they actually said. No questions.` }];
+  const raw = (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim();
+  if (raw) return raw;
+
+  // Fallback — always reference what they said
+  const lower = userText.toLowerCase();
+  if (/30th|thirtieth/.test(lower))       return "A 30th. Good. Milestones always bring something out in people.";
+  if (/birthday|bday/.test(lower))        return "A birthday. Good. Someone always takes that personally by the end of the night.";
+  if (/leaving|quit|resignation/.test(lower)) return "Leaving a job. There's always at least one person who cries.";
+  if (/anniversary/.test(lower))          return "An anniversary. Good. The ones who've lasted always have something to prove.";
+  if (/celebration|celebrate/.test(lower)) return "A celebration. Good. The best nights always start with an excuse.";
+  if (/casual|chill|hangout/.test(lower)) return "A casual night. Sure. Those are the ones that go sideways.";
+  return `${userText.charAt(0).toUpperCase() + userText.slice(0, 30)}. Good. I can work with that.`;
 }
 
 async function getRoleAssignment(userText: string): Promise<string> {
   const msgs: ConvMessage[] = [{
     role: "user",
-    content: `Guest mentioned this item of clothing or prop: "${userText}". Assign ONE murder mystery character role. Format exactly like this example: "A sequined dress. She's the Heiress. That's not a suggestion." Max 15 words.`,
+    content: `Guest mentioned this clothing/prop: "${userText}". Assign ONE murder mystery character. Format exactly: "[Item]. [They're] the [Character]. That's not a suggestion." Max 12 words.`,
   }];
-  return (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim() ?? "";
+  const raw = (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim();
+  if (raw) return raw;
+
+  // Fallback role assignments
+  const lower = userText.toLowerCase();
+  if (/sequin|sparkl|glitter/.test(lower)) return "A sequined dress. She's the Heiress. That's not a suggestion.";
+  if (/velvet|blazer|suit/.test(lower))   return "A velvet blazer. He's the Detective. Obviously.";
+  if (/fur|coat/.test(lower))             return "A fur coat. She's the Countess. It was always going to be her.";
+  if (/hat|cap/.test(lower))              return "A dramatic hat. That's the Colonel. Decided.";
+  return "Whatever they show up in — I'll make it work.";
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

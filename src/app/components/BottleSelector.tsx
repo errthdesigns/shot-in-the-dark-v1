@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import imgCristalino from "../../assets/cristalino_bottle.png";
-import imgReposado   from "../../assets/resposado_bottle.png";
+import imgReposado   from "../../assets/The Night 1/Don Julio Reposado.png";
 import imgBlanco     from "../../assets/blanco_bottle.png";
 
 // Only reposado is available in this demo

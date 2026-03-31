@@ -1,12 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { speakText, stopSpeech, unlockAudio, getSpeechPromise } from "../services/elevenlabs";
-import { ConvMessage } from "../services/claude";
 import { AutoGallery, TileSlot } from "./AutoGallery";
 import { IntroScreen } from "./IntroScreen";
 import { VideoScreen } from "./VideoScreen";
 import { NameScreen } from "./NameScreen";
-import { OccasionScreen } from "./OccasionScreen";
 import { InfoGatherScreen, PartyDetails } from "./InfoGatherScreen";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import { CartScreen, calcCartTotal } from "./CartScreen";
@@ -442,16 +440,13 @@ export function PartyPlannerScreen() {
   // Name entry after video
   const [nameActive, setNameActive]     = useState(false);
   const [playerName, setPlayerName]     = useState("");
-  // Occasion chat — shown after name entry, before info gather
-  const [occasionActive, setOccasionActive] = useState(false);
-  // Info-gather tap UI — shown after occasion chat, before main chat
+  // Info-gather tap UI — shown after name entry, before main flow
   const [infoGatherActive, setInfoGatherActive] = useState(false);
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
   const [selectedBottle, setSelectedBottle] = useState<string | null>(null);
-  const [convHistory, setConvHistory]       = useState<ConvMessage[]>([]);
   // Text input overlay
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
@@ -464,8 +459,6 @@ export function PartyPlannerScreen() {
   // Voice capture refs
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
-  // Ref mirror of convHistory so Effect 4 can read current value without stale closure
-  const convHistoryRef     = useRef<ConvMessage[]>([]);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -570,12 +563,9 @@ export function PartyPlannerScreen() {
     });
   }
 
-  // Keep refs in sync so Effect 4 closures never go stale
-  useEffect(() => { convHistoryRef.current = convHistory; }, [convHistory]);
-
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
-    if (introActive || videoActive || nameActive || occasionActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     clearAll();
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
@@ -587,7 +577,7 @@ export function PartyPlannerScreen() {
     if (step === BOTTLE_RESPONSE_STEP && !selectedBottle) return;
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 850);
     return clearThink;
-  }, [step, introActive, videoActive, nameActive, occasionActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When bottle is selected, kick off typing on the bottle response step
   useEffect(() => {
@@ -599,7 +589,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
-    if (introActive || videoActive || nameActive || occasionActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
     const text  = resolveAiText(step, selectedBottle);
     const s     = STEPS[step];
@@ -917,7 +907,7 @@ export function PartyPlannerScreen() {
 
       {/* ── AI text (hidden on bottle-select and all overlay screens) ────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
+        {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
@@ -931,7 +921,7 @@ export function PartyPlannerScreen() {
 
       {/* ── User text bubble (live transcript while recording, then typed result) */}
       <AnimatePresence>
-        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
+        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !infoGatherActive && (
           <motion.div
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
@@ -946,7 +936,7 @@ export function PartyPlannerScreen() {
       </AnimatePresence>
 
       {/* ── Step indicator pills — sit above the control bar ─────────────────── */}
-      {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
+      {!introActive && !videoActive && !nameActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
         <div style={{ position: "absolute", bottom: 84, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
           {STEPS.map((_, i) => (
             <motion.div key={i}
@@ -959,7 +949,7 @@ export function PartyPlannerScreen() {
       )}
 
       {/* ── Bottom control bar ───────────────────────────────────────────────── */}
-      {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
+      {!introActive && !videoActive && !nameActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
         <div
           style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 18, zIndex: 50 }}
           onClick={(e) => e.stopPropagation()}
@@ -1113,38 +1103,15 @@ export function PartyPlannerScreen() {
             <NameScreen onComplete={(name) => {
               setPlayerName(name);
               setNameActive(false);
-              setOccasionActive(true);
+              setInfoGatherActive(true);
             }} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Occasion chat — shown after name entry, before info gather ──────────── */}
+      {/* ── Info-gather tap UI — shown after name entry, before main flow ────── */}
       <AnimatePresence>
-        {occasionActive && !nameActive && (
-          <motion.div
-            key="occasion-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: "easeInOut" }}
-            style={{ position: "absolute", inset: 0, zIndex: 170, borderRadius: 21 }}
-          >
-            <OccasionScreen
-              playerName={playerName}
-              onComplete={(history) => {
-                setConvHistory(history);
-                setOccasionActive(false);
-                setInfoGatherActive(true);
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Info-gather tap UI — shown after occasion chat, before main chat ────── */}
-      <AnimatePresence>
-        {infoGatherActive && !nameActive && !occasionActive && (
+        {infoGatherActive && !nameActive && (
           <motion.div
             key="info-gather-overlay"
             initial={{ opacity: 1 }}

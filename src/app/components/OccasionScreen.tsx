@@ -138,7 +138,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Typewriter + TTS ──────────────────────────────────────────────────────
+  // ── Typewriter + TTS — starts when audio actually begins playing ──────────
   useEffect(() => {
     if (phase !== "ai_speaking") return;
     let cancelled = false;
@@ -146,15 +146,10 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     if (!text) return;
 
     setIsTyping(true);
-
     const isLast = isDoneRef.current;
-    const sp = speakText(text);
-    if (isLast) {
-      sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
-    }
-
     const finalDisplay = text.split("\n\n").map(p => p.trim()).filter(Boolean).pop() ?? text;
 
+    let tickTimer: ReturnType<typeof setTimeout> | null = null;
     let i = 0;
     const tick = () => {
       if (cancelled) return;
@@ -166,17 +161,37 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       if (i < text.length) {
         const c = text[i - 1];
         const d = c === "." || c === "?" ? 480 : c === "," ? 200 : c === "\n" ? 0 : 68 + Math.random() * 20;
-        setTimeout(tick, d);
+        tickTimer = setTimeout(tick, d);
       } else {
         setAiDisplay(finalDisplay);
         setIsTyping(false);
         if (!isLast) {
-          setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);
+          tickTimer = setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);
         }
       }
     };
-    const t = setTimeout(tick, 50);
-    return () => { cancelled = true; clearTimeout(t); };
+
+    // Start tick only when audio begins — stays locked to voice
+    let typingStarted = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    const startTyping = () => {
+      if (typingStarted || cancelled) return;
+      typingStarted = true;
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      tickTimer = setTimeout(tick, 0);
+    };
+
+    fallbackTimer = setTimeout(startTyping, 2500); // safety net
+    const sp = speakText(text, startTyping);
+    if (isLast) {
+      sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
+    }
+
+    return () => {
+      cancelled = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (tickTimer) clearTimeout(tickTimer);
+    };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

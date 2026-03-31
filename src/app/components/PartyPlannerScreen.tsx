@@ -480,10 +480,16 @@ export function PartyPlannerScreen() {
     current.imgState === "gatsby-reveal" ||
     current.imgState === "keyword-reveal";
 
+  const COCKTAIL_GALLERY = [
+    imgCocktailBitter, imgCocktailChilli, imgCocktailGrapefruit, imgCocktailHoney,
+    imgCocktailLemon,  imgCocktailLime,   imgCocktailMint,        imgCocktailSour,
+    imgCocktailSweet,  imgIngredientStrawberry, imgDrinkA,
+  ];
+
   const currentGalleryImages =
-    current.imgState === "gatsby-reveal"          ? GATSBY_COMBINED :
+    current.imgState === "gatsby-reveal"               ? GATSBY_COMBINED :
     current.imgState === "keyword-reveal" && step === 1 ? WESTERN_GALLERY :
-    current.imgState === "keyword-reveal"         ? [] :
+    current.imgState === "keyword-reveal"               ? COCKTAIL_GALLERY :
     PARTY_IMAGES;
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
@@ -621,24 +627,11 @@ export function PartyPlannerScreen() {
 
     setAiDisplay(""); setIsAiTyping(true);
 
-    // Speak the full line concurrently with the typewriter animation (skip if noVoice)
-    if (text.trim() && !s.noVoice) {
-      unlockAudio();
-      if (s.speechAdvance) {
-        speakText(text).then(() => {
-          voiceDone = true;
-          tryAdvance();
-        });
-      } else {
-        speakText(text);
-      }
-    }
-
     const next = () => {
+      if (cancelled) return;
       if (i >= text.length) {
         setIsAiTyping(false);
         if (s.speechAdvance) {
-          // Wait for voice to finish too (tryAdvance handles it)
           textDone = true;
           tryAdvance();
         } else if (s.autoAdvance) {
@@ -649,10 +642,10 @@ export function PartyPlannerScreen() {
         return;
       }
       i++;
-      // Only show text after the last paragraph break — clears old text as new arrives
       const soFar = text.slice(0, i);
       const lastBreak = soFar.lastIndexOf("\n\n");
-      setAiDisplay(lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar);
+      const chunk = lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar;
+      if (chunk.trim()) setAiDisplay(chunk);
       const c = text[i - 1];
       let d = 72 + Math.random() * 16;
       if (c === "." || c === "!" || c === "?") d = 520;
@@ -660,8 +653,34 @@ export function PartyPlannerScreen() {
       else if (c === "\n") d = 500;
       typeTimerRef.current = setTimeout(next, d);
     };
-    next();
-    return () => { cancelled = true; clearType(); clearAdvance(); };
+
+    // Start typewriter only when audio actually begins playing (stays in sync)
+    let typingStarted = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    const startTyping = () => {
+      if (typingStarted || cancelled) return;
+      typingStarted = true;
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      next();
+    };
+
+    if (text.trim() && !s.noVoice) {
+      unlockAudio();
+      fallbackTimer = setTimeout(startTyping, 2500); // safety net if audio stalls
+      if (s.speechAdvance) {
+        speakText(text, startTyping).then(() => { voiceDone = true; tryAdvance(); });
+      } else {
+        speakText(text, startTyping);
+      }
+    } else {
+      startTyping(); // no audio — start immediately
+    }
+
+    return () => {
+      cancelled = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      clearType(); clearAdvance();
+    };
   }, [phase, step, introActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Effect 4: transcribing → type user text → advance step ─────────────────
@@ -866,11 +885,11 @@ export function PartyPlannerScreen() {
   return (
     <div style={{ position: "relative", width: 402, height: 874, backgroundColor: "#000", overflow: "hidden", borderRadius: 25, border: "4px solid white", boxSizing: "border-box", perspective: "700px" }}>
 
-      {/* ── Audio-reactive gradient (black bg steps only) ───────────────────── */}
+      {/* ── Audio-reactive gradient — always shown on chat steps, behind gallery */}
       <AnimatePresence>
-        {!showGallery && current.view === "chat" && (
+        {current.view === "chat" && (
           <motion.div key="audio-gradient" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
-            style={{ position: "absolute", inset: 0 }}
+            style={{ position: "absolute", inset: 0, zIndex: 0 }}
           >
             <AudioReactiveGradient />
           </motion.div>

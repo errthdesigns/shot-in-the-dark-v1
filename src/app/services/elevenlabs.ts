@@ -82,8 +82,8 @@ function toSSML(text: string): string {
   return `<speak><prosody pitch="-5st" rate="88%">${paced}</prosody></speak>`;
 }
 
-export async function speakText(text: string): Promise<void> {
-  if (!text.trim()) return;
+export async function speakText(text: string, onStart?: () => void): Promise<void> {
+  if (!text.trim()) { onStart?.(); return; }
   ensureAnalyser();
   // Ensure AudioContext is running — it can be auto-suspended by the browser
   if (_audioCtx && _audioCtx.state !== "running") {
@@ -102,7 +102,7 @@ export async function speakText(text: string): Promise<void> {
         body: JSON.stringify({ text: toSSML(text), text_type: "ssml", model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.75, similarity_boost: 0.75, style: 0.0, use_speaker_boost: false } }),
       });
       if (_gen !== myGen) { resolve(); return; }
-      if (!res.ok) { console.error("[EL] HTTP", res.status); resolve(); _resolve = null; return; }
+      if (!res.ok) { console.error("[EL] HTTP", res.status); onStart?.(); resolve(); _resolve = null; return; }
       const blob = await res.blob();
       if (_gen !== myGen) { resolve(); return; }
       const url = URL.createObjectURL(blob); _blobUrl = url;
@@ -113,10 +113,11 @@ export async function speakText(text: string): Promise<void> {
       // Resume AudioContext in case it was suspended (e.g. after a video plays)
       await _audioCtx?.resume().catch(() => {});
       await el.play();
+      onStart?.(); // ← fires exactly when audio begins playing
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("[EL] error:", err);
-      if (_gen === myGen) { resolve(); _resolve = null; }
+      if (_gen === myGen) { onStart?.(); resolve(); _resolve = null; }
     }
   });
   _currentSpeechPromise = p;

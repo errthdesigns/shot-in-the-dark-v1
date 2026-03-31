@@ -53,7 +53,10 @@ RULES
 // After this many user answers, wrap up and transition
 const MAX_TURNS = 4;
 
-type OPhase = "fetching" | "ai_speaking" | "ready" | "recording" | "thinking";
+// Beat 1 is always this exact line — no API call needed
+const BEAT_1 = "Before we begin — what's the occasion?\n\nBirthday? Someone's finally leaving a job they hate? Or are you just looking for an excuse to make your friends feel guilty about something?";
+
+type OPhase = "idle" | "ai_speaking" | "ready" | "recording" | "thinking";
 
 interface Props {
   playerName: string;
@@ -100,7 +103,7 @@ function Cursor() {
 }
 
 export function OccasionScreen({ playerName, onComplete }: Props) {
-  const [phase, setPhase]             = useState<OPhase>("fetching");
+  const [phase, setPhase]             = useState<OPhase>("idle");
   const [aiDisplay, setAiDisplay]     = useState("");
   const [isTyping, setIsTyping]       = useState(false);
   const [userDisplay, setUserDisplay] = useState("");
@@ -118,26 +121,16 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const voiceTranscriptRef = useRef<string>("");
   const typeInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Initial greeting ──────────────────────────────────────────────────────
+  // ── Initial greeting — Beat 1 is hardcoded, no API call ─────────────────
   useEffect(() => {
     cancelledRef.current = false;
-
-    // Keep this in history so subsequent calls start with a user message
-    const initMsg: ConvMessage = {
-      role: "user",
-      content: `The guest's name is ${playerName}. Greet them briefly — just once, woven in naturally. Then ask what tonight is for. 2 lines max.`,
-    };
-
-    hostChat([initMsg], undefined, HOST_SYSTEM).then(raw => {
-      if (cancelledRef.current) return;
-      const greeting = raw || `${playerName}.\n\nWhat are we building tonight?`;
-      // Store both sides so history always begins with a user message
-      historyRef.current = [initMsg, { role: "assistant", content: greeting }];
-      pendingAiRef.current = greeting;
-      setPhase("ai_speaking");
-    });
-
-    return () => { cancelledRef.current = true; stopSpeech(); };
+    // Seed history with a user message first so all future API calls are valid
+    const seedMsg: ConvMessage = { role: "user", content: `[Context: guest's name is ${playerName}]` };
+    historyRef.current = [seedMsg, { role: "assistant", content: BEAT_1 }];
+    pendingAiRef.current = BEAT_1;
+    // Small delay so the screen has time to render before typing starts
+    const t = setTimeout(() => { if (!cancelledRef.current) setPhase("ai_speaking"); }, 120);
+    return () => { cancelledRef.current = true; clearTimeout(t); stopSpeech(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Typewriter + TTS whenever ai_speaking fires ───────────────────────────
@@ -267,7 +260,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   };
 
   const micActive    = phase === "recording";
-  const showThinking = phase === "fetching" || phase === "thinking";
+  const showThinking = phase === "thinking";
   const showControls = phase === "ready" || phase === "recording";
 
   return (

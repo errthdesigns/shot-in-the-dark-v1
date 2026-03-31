@@ -85,7 +85,7 @@ export interface ConvMessage {
   content: string;
 }
 
-export async function hostChat(messages: ConvMessage[], signal?: AbortSignal): Promise<string> {
+export async function hostChat(messages: ConvMessage[], signal?: AbortSignal, systemOverride?: string): Promise<string> {
   if (!API_KEY) return "";
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -100,7 +100,7 @@ export async function hostChat(messages: ConvMessage[], signal?: AbortSignal): P
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
         max_tokens: 220,
-        system: SYSTEM_PROMPT,
+        system: systemOverride ?? SYSTEM_PROMPT,
         messages,
       }),
     });

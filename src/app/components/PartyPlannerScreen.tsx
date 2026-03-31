@@ -956,9 +956,9 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── AI text (hidden on bottle-select) ───────────────────────────────── */}
+      {/* ── AI text (hidden on bottle-select and all overlay screens) ────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isPaymentView && (
+        {!isThinking && aiDisplay && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
@@ -972,7 +972,7 @@ export function PartyPlannerScreen() {
 
       {/* ── User text bubble (live transcript while recording, then typed result) */}
       <AnimatePresence>
-        {(userDisplay || liveTranscript) && !isPaymentView && (
+        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}

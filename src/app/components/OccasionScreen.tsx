@@ -5,7 +5,32 @@ import { hostChat, ConvMessage } from "../services/claude";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 
-type OPhase = "fetching" | "greeting" | "ready" | "recording" | "confirming";
+// ── The Host system prompt ────────────────────────────────────────────────────
+const HOST_SYSTEM = `You are The Host. You run murder mystery parties. That's all you do. You are not a party planner. You don't ask about food, venues, or vibes.
+
+Your job: get to know the guests before they arrive so you can cast them perfectly.
+You do this by interrogating the user — casually, with authority. You're building a picture of their group. Once you have enough, you assign characters, suggest costumes, and flag props they might already own.
+
+What you ask about:
+- How many people are coming
+- Who they are (personalities, not names — the loud one, the overthinker, the one who always ends up being suspicious)
+- What people are likely to wear / what they already have at home
+- Whether anyone has anything useful — a fur coat, a cane, a dramatic hat, goblets
+
+What you do with that:
+- Match people to characters based on what you hear
+- Make costume suggestions feel inevitable ("You said she always shows up overdressed. She's the Countess.")
+- Flag props with specificity ("Do you have any candlesticks? Actual ones.")
+- Tease the narrative without revealing the mystery
+
+Tone: Dry. Specific. Confident. You don't ask two questions at once. You lead. You decide. The user confirms.
+
+IMPORTANT: Keep responses to 3 short lines max. Use line breaks between beats. Never ask two questions at once.`;
+
+// Total number of user turns before transitioning
+const MAX_TURNS = 3;
+
+type OPhase = "fetching" | "ai_speaking" | "ready" | "recording" | "thinking";
 
 interface Props {
   playerName: string;
@@ -22,6 +47,25 @@ function MicIcon({ color = "white" }: { color?: string }) {
   );
 }
 
+function XIcon() {
+  return (
+    <svg style={{ display: "block", width: 12, height: 12 }} fill="none" viewBox="0 0 13 12.5">
+      <line stroke="rgba(255,255,255,0.7)" strokeLinecap="round" x1="1.20711" x2="12.5" y1="0.5" y2="11.7929" />
+      <line stroke="rgba(255,255,255,0.7)" strokeLinecap="round" transform="matrix(-0.707107 0.707107 0.707107 0.707107 12.5 0.5)" x1="0.5" x2="16.4706" y1="-0.5" y2="-0.5" />
+    </svg>
+  );
+}
+
+function KeyboardIcon() {
+  return (
+    <svg width="17" height="13" viewBox="0 0 19 14" fill="none">
+      <rect x="0.5" y="0.5" width="18" height="13" rx="2.5" stroke="rgba(255,255,255,0.55)" />
+      <line x1="4" y1="4.5" x2="15" y2="4.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="4" y1="7.5" x2="11" y2="7.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function Cursor() {
   return (
     <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />
@@ -29,52 +73,55 @@ function Cursor() {
 }
 
 export function OccasionScreen({ playerName, onComplete }: Props) {
-  const [phase, setPhase]               = useState<OPhase>("fetching");
-  const [aiDisplay, setAiDisplay]       = useState("");
-  const [isTyping, setIsTyping]         = useState(false);
-  const [userDisplay, setUserDisplay]   = useState("");
+  const [phase, setPhase]             = useState<OPhase>("fetching");
+  const [aiDisplay, setAiDisplay]     = useState("");
+  const [isTyping, setIsTyping]       = useState(false);
+  const [userDisplay, setUserDisplay] = useState("");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
 
-  const greetingRef  = useRef<string>("");
-  const confirmRef   = useRef<string>("");
-  const historyRef   = useRef<ConvMessage[]>([]);
-  const cancelledRef = useRef(false);
+  const historyRef     = useRef<ConvMessage[]>([]);
+  const pendingAiRef   = useRef<string>("");
+  const cancelledRef   = useRef(false);
+  const userTurnCount  = useRef(0);
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
   const typeInputRef = useRef<HTMLInputElement>(null);
+  const isDoneRef = useRef(false);
 
-  // ── Fetch greeting on mount ───────────────────────────────────────────────
+  // ── Fetch initial greeting on mount ──────────────────────────────────────
   useEffect(() => {
     cancelledRef.current = false;
-    const seedMsgs: ConvMessage[] = [{
+    const seed: ConvMessage[] = [{
       role: "user",
-      content: `My name is ${playerName}. I want to plan a night. Address me by name naturally (not as the opener), then ask what kind of night we're building — is it a birthday, something fancy, a casual hangout? Be curious, dark, intriguing. 2-3 short lines max.`,
+      content: `The user's name is ${playerName}. Greet them briefly by name — just once, naturally woven in. Then ask what the occasion is. 2 lines max.`,
     }];
-    hostChat(seedMsgs).then(raw => {
+    hostChat(seed, undefined, HOST_SYSTEM).then(raw => {
       if (cancelledRef.current) return;
-      const greeting = raw || `${playerName}.\n\nSo — what are we building tonight?\n\nBirthday? Something fancy? Or are we keeping it loose?`;
-      greetingRef.current = greeting;
-      historyRef.current = [...seedMsgs, { role: "assistant", content: greeting }];
-      setPhase("greeting");
+      const greeting = raw || `${playerName}.\n\nWhat are we building tonight?`;
+      historyRef.current = [{ role: "assistant", content: greeting }];
+      pendingAiRef.current = greeting;
+      setPhase("ai_speaking");
     });
     return () => { cancelledRef.current = true; stopSpeech(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Typewriter + TTS for greeting / confirmation ──────────────────────────
+  // ── Typewriter + TTS whenever phase becomes "ai_speaking" ────────────────
   useEffect(() => {
-    if (phase !== "greeting" && phase !== "confirming") return;
+    if (phase !== "ai_speaking") return;
     cancelledRef.current = false;
-    const text = phase === "greeting" ? greetingRef.current : confirmRef.current;
+    const text = pendingAiRef.current;
     if (!text) return;
+
+    setAiDisplay("");
     setIsTyping(true);
 
-    if (phase === "greeting") {
-      speakText(text);
-    } else {
-      // Confirming — advance to onComplete when audio finishes
-      speakText(text).then(() => {
+    const isLastTurn = isDoneRef.current;
+
+    const speechPromise = speakText(text);
+    if (isLastTurn) {
+      speechPromise.then(() => {
         if (!cancelledRef.current) onComplete(historyRef.current);
       });
     }
@@ -92,7 +139,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
         setTimeout(tick, d);
       } else {
         setIsTyping(false);
-        if (phase === "greeting") {
+        if (!isLastTurn) {
           setTimeout(() => { if (!cancelledRef.current) setPhase("ready"); }, 650);
         }
       }
@@ -101,47 +148,49 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     return () => { cancelledRef.current = true; clearTimeout(t); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Focus type input when it opens ───────────────────────────────────────
+  // ── Focus type input ──────────────────────────────────────────────────────
   useEffect(() => {
     if (typeInputOpen) setTimeout(() => typeInputRef.current?.focus(), 80);
   }, [typeInputOpen]);
 
-  // ── Handle completed user response ───────────────────────────────────────
+  // ── Handle user answer ────────────────────────────────────────────────────
   const handleUserText = (uText: string) => {
     if (!uText.trim()) { setPhase("ready"); return; }
     cancelledRef.current = false;
     setUserDisplay(uText);
     setLiveTranscript("");
+    userTurnCount.current += 1;
 
     const userMsg: ConvMessage = { role: "user", content: uText };
-    const followMsgs: ConvMessage[] = [
+    const isLast = userTurnCount.current >= MAX_TURNS;
+    isDoneRef.current = isLast;
+
+    const msgs: ConvMessage[] = [
       ...historyRef.current,
       userMsg,
-      { role: "user", content: "[System: Give a brief 1-2 line confirmation — acknowledge the vibe, say you'll get it built. Don't repeat their words back literally. Dark, confident, in character. End by saying you need a few quick details.]" },
+      ...(isLast ? [{
+        role: "user" as const,
+        content: "[System: You have enough. Give one final dry remark that signals you know exactly what you're building. 2 lines max. Don't ask another question.]",
+      }] : []),
     ];
-    hostChat(followMsgs).then(raw => {
+
+    setPhase("thinking");
+    hostChat(msgs, undefined, HOST_SYSTEM).then(raw => {
       if (cancelledRef.current) return;
-      const confirm = raw || "Perfect.\n\nLet me get a few details and we'll build it.";
-      confirmRef.current = confirm;
-      historyRef.current = [
-        ...historyRef.current,
-        userMsg,
-        { role: "assistant", content: confirm },
-      ];
-      setAiDisplay("");
-      setPhase("confirming");
+      const reply = raw || (isLast ? "I have everything I need.\n\nLet's begin." : "Go on.");
+      historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
+      pendingAiRef.current = reply;
+      setUserDisplay("");
+      setPhase("ai_speaking");
     });
   };
 
-  // ── Voice recording ───────────────────────────────────────────────────────
+  // ── Voice ─────────────────────────────────────────────────────────────────
   const handleMic = () => {
     if (phase !== "ready") return;
     unlockAudio();
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setTypeInputOpen(true);
-      return;
-    }
+    if (!SpeechRecognition) { setTypeInputOpen(true); return; }
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch { /* ignore */ }
       recognitionRef.current = null;
@@ -168,10 +217,18 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       recognitionRef.current = null;
       const uText = voiceTranscriptRef.current.trim();
       setLiveTranscript("");
-      handleUserText(uText);
+      handleUserText(uText || "");
     };
     recognition.onerror = () => { setPhase("ready"); setLiveTranscript(""); };
     recognition.start();
+  };
+
+  const handleAbort = () => {
+    if (phase === "recording") {
+      try { recognitionRef.current?.abort(); } catch { /* ignore */ }
+      recognitionRef.current = null;
+      setPhase("ready");
+    }
   };
 
   const submitType = () => {
@@ -182,6 +239,8 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   };
 
   const micActive = phase === "recording";
+  const showControls = phase === "ready" || phase === "recording";
+  const showThinking = phase === "thinking" || phase === "fetching";
 
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
@@ -190,41 +249,42 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       {/* Bottom glow */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 380, background: "radial-gradient(ellipse 460px 380px at 50% 100%, rgba(151,21,26,0.48) 0%, rgba(151,21,26,0.12) 55%, transparent 75%)", pointerEvents: "none", zIndex: 1 }} />
 
-      {/* AI text / thinking dots */}
-      <div style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 310, textAlign: "center", zIndex: 5 }}>
-        <AnimatePresence mode="wait">
-          {phase === "fetching" && (
-            <motion.div key="dots" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ display: "flex", gap: 9, alignItems: "center", justifyContent: "center" }}
-            >
-              {[0, 1, 2].map(i => (
-                <motion.div key={i}
-                  style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.45)" }}
-                  animate={{ y: [-5, 5, -5], opacity: [0.35, 1, 0.35] }}
-                  transition={{ duration: 0.75, delay: i * 0.14, repeat: Infinity, ease: "easeInOut" }}
-                />
-              ))}
-            </motion.div>
-          )}
+      {/* Thinking dots */}
+      <AnimatePresence>
+        {showThinking && (
+          <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center", justifyContent: "center", zIndex: 5 }}
+          >
+            {[0, 1, 2].map(i => (
+              <motion.div key={i}
+                style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.45)" }}
+                animate={{ y: [-5, 5, -5], opacity: [0.35, 1, 0.35] }}
+                transition={{ duration: 0.75, delay: i * 0.14, repeat: Infinity, ease: "easeInOut" }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {(phase === "greeting" || phase === "confirming" || phase === "ready") && aiDisplay && (
-            <motion.p key={phase + aiDisplay.slice(0, 12)}
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontSize: 24, color: "white", lineHeight: 1.35, margin: 0, letterSpacing: 0.1, whiteSpace: "pre-wrap" }}
-            >
+      {/* AI text */}
+      <AnimatePresence mode="wait">
+        {!showThinking && aiDisplay && (
+          <motion.div key="ai-text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 310, textAlign: "center", zIndex: 5 }}
+          >
+            <p style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontSize: 24, color: "white", lineHeight: 1.35, margin: 0, letterSpacing: 0.1, whiteSpace: "pre-wrap" }}>
               {aiDisplay}
               {isTyping && <Cursor />}
-            </motion.p>
-          )}
-        </AnimatePresence>
-      </div>
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* User response text */}
       <AnimatePresence>
         {(userDisplay || liveTranscript) && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ position: "absolute", bottom: 95, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}
+            style={{ position: "absolute", bottom: 100, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.68)", margin: 0, textAlign: "center", maxWidth: 280, fontStyle: "italic" }}>
               {liveTranscript && !userDisplay ? liveTranscript : userDisplay}
@@ -233,35 +293,46 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Controls */}
+      {/* ── Controls: X | Mic | Keyboard ─────────────────────────────────── */}
       <AnimatePresence>
-        {(phase === "ready" || phase === "recording") && (
+        {showControls && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ position: "absolute", bottom: 26, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 22, alignItems: "center", zIndex: 40 }}
+            style={{ position: "absolute", bottom: 26, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 18, alignItems: "center", zIndex: 40 }}
+            onClick={e => e.stopPropagation()}
           >
-            {/* Keyboard button */}
-            <motion.button
-              onClick={() => setTypeInputOpen(true)}
-              style={{ width: 46, height: 46, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.08)", border: "1.5px dashed rgba(255,255,255,0.28)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            {/* X — abort recording or dismiss */}
+            <button
+              onClick={handleAbort}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
-              <svg width="17" height="13" viewBox="0 0 19 14" fill="none">
-                <rect x="0.5" y="0.5" width="18" height="13" rx="2.5" stroke="rgba(255,255,255,0.55)" />
-                <line x1="4" y1="4.5" x2="15" y2="4.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" strokeLinecap="round" />
-                <line x1="4" y1="7.5" x2="11" y2="7.5" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-            </motion.button>
+              <XIcon />
+            </button>
 
-            {/* Mic button */}
-            <motion.button
+            {/* Mic — centre, largest */}
+            <button
               onClick={handleMic}
-              animate={micActive ? { scale: [1, 1.08, 1], backgroundColor: "#cc2222" } : { backgroundColor: "white" }}
-              transition={micActive ? { duration: 0.9, repeat: Infinity } : { duration: 0.2 }}
-              style={{ width: 64, height: 64, borderRadius: "50%", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 56, height: 56, borderRadius: "50%", background: micActive ? "transparent" : "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
             >
-              <div style={{ width: 22, height: 30 }}>
-                <MicIcon color={micActive ? "white" : "black"} />
-              </div>
-            </motion.button>
+              {micActive ? (
+                <motion.div
+                  animate={{ scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "#cc2222", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <div style={{ width: 20, height: 28 }}><MicIcon color="white" /></div>
+                </motion.div>
+              ) : (
+                <div style={{ width: 20, height: 28 }}><MicIcon color="black" /></div>
+              )}
+            </button>
+
+            {/* Keyboard */}
+            <button
+              onClick={() => setTypeInputOpen(true)}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <KeyboardIcon />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

@@ -114,30 +114,36 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   // history always starts with a user message so the API is happy
   const historyRef    = useRef<ConvMessage[]>([]);
   const pendingAiRef  = useRef<string>("");
-  const cancelledRef  = useRef(false);
+  // mountedRef: only false after unmount — safe to use in async callbacks
+  const mountedRef    = useRef(true);
   const userTurnCount = useRef(0);
   const isDoneRef     = useRef(false);
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
   const typeInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Track mount/unmount ───────────────────────────────────────────────────
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; stopSpeech(); };
+  }, []);
+
   // ── Initial greeting — Beat 1 is hardcoded, no API call ─────────────────
   useEffect(() => {
-    cancelledRef.current = false;
-    // Seed history with a user message first so all future API calls are valid
     const seedMsg: ConvMessage = { role: "user", content: `[Context: guest's name is ${playerName}]` };
     historyRef.current = [seedMsg, { role: "assistant", content: BEAT_1 }];
     pendingAiRef.current = BEAT_1;
-    // Small delay so the screen has time to render before typing starts
-    const t = setTimeout(() => { if (!cancelledRef.current) setPhase("ai_speaking"); }, 120);
-    return () => { cancelledRef.current = true; clearTimeout(t); stopSpeech(); };
+    const t = setTimeout(() => { if (mountedRef.current) setPhase("ai_speaking"); }, 120);
+    return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Typewriter + TTS whenever ai_speaking fires ───────────────────────────
   useEffect(() => {
     if (phase !== "ai_speaking") return;
-    cancelledRef.current = false;
-    const text = pendingAiRef.current;
+    // Local cancelled flag — lives in this closure only, no shared ref needed
+    let cancelled = false;
+    // Trim text so trailing newlines from LLM never leave aiDisplay empty
+    const text = pendingAiRef.current.trim();
     if (!text) return;
 
     setAiDisplay("");
@@ -146,16 +152,18 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     const isLast = isDoneRef.current;
     const sp = speakText(text);
     if (isLast) {
-      sp.then(() => { if (!cancelledRef.current) onComplete(historyRef.current); });
+      sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
     }
 
     let i = 0;
     const tick = () => {
-      if (cancelledRef.current) return;
+      if (cancelled) return;
       i++;
       const soFar = text.slice(0, i);
       const lastBreak = soFar.lastIndexOf("\n\n");
-      setAiDisplay(lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar);
+      const chunk = lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar;
+      // Only update display if the chunk is non-empty to avoid blank flashes
+      if (chunk.trim()) setAiDisplay(chunk);
       if (i < text.length) {
         const c = text[i - 1];
         const d = c === "." || c === "?" ? 240 : c === "," ? 100 : c === "\n" ? 0 : 32 + Math.random() * 18;
@@ -163,12 +171,12 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       } else {
         setIsTyping(false);
         if (!isLast) {
-          setTimeout(() => { if (!cancelledRef.current) setPhase("ready"); }, 650);
+          setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);
         }
       }
     };
     const t = setTimeout(tick, 50);
-    return () => { cancelledRef.current = true; clearTimeout(t); };
+    return () => { cancelled = true; clearTimeout(t); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Focus text input ──────────────────────────────────────────────────────
@@ -179,7 +187,6 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   // ── Handle user turn ──────────────────────────────────────────────────────
   const handleUserText = (uText: string) => {
     if (!uText.trim()) { setPhase("ready"); return; }
-    cancelledRef.current = false;
     setUserDisplay(uText);
     setLiveTranscript("");
     userTurnCount.current += 1;
@@ -199,8 +206,10 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
 
     setPhase("thinking");
     hostChat(msgs, undefined, HOST_SYSTEM).then(raw => {
-      if (cancelledRef.current) return;
-      const reply = raw || (isLast ? "Good. I have enough to work with.\n\nYou'll get your characters, your costumes, and your killer.\n\nI just need a few more details from you first — and then we begin." : "Go on.");
+      if (!mountedRef.current) return;
+      const reply = (raw?.trim()) || (isLast
+        ? "Good. I have enough to work with.\n\nYou'll get your characters, your costumes, and your killer.\n\nI just need a few more details from you first — and then we begin."
+        : "Go on.");
       historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
       pendingAiRef.current = reply;
       setUserDisplay("");

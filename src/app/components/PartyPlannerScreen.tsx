@@ -654,10 +654,10 @@ export function PartyPlannerScreen() {
       const lastBreak = soFar.lastIndexOf("\n\n");
       setAiDisplay(lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar);
       const c = text[i - 1];
-      let d = 34;
-      if (c === "." || c === "!" || c === "?") d = 300;
-      else if (c === ",") d = 100;
-      else if (c === "\n") d = 400;
+      let d = 72 + Math.random() * 16;
+      if (c === "." || c === "!" || c === "?") d = 520;
+      else if (c === ",") d = 210;
+      else if (c === "\n") d = 500;
       typeTimerRef.current = setTimeout(next, d);
     };
     next();

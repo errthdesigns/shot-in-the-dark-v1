@@ -637,10 +637,10 @@ export function PartyPlannerScreen() {
       const chunk = lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar;
       if (chunk.trim()) setAiDisplay(chunk);
       const c = text[i - 1];
-      let d = 72 + Math.random() * 16;
-      if (c === "." || c === "!" || c === "?") d = 520;
-      else if (c === ",") d = 210;
-      else if (c === "\n") d = 500;
+      let d = 50 + Math.random() * 12;
+      if (c === "." || c === "!" || c === "?") d = 320;
+      else if (c === ",") d = 130;
+      else if (c === "\n") d = 220;
       typeTimerRef.current = setTimeout(next, d);
     };
 

@@ -160,7 +160,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       if (chunk.trim()) setAiDisplay(chunk);
       if (i < text.length) {
         const c = text[i - 1];
-        const d = c === "." || c === "?" ? 480 : c === "," ? 200 : c === "\n" ? 0 : 68 + Math.random() * 20;
+        const d = c === "." || c === "?" ? 320 : c === "," ? 130 : c === "\n" ? 0 : 50 + Math.random() * 12;
         tickTimer = setTimeout(tick, d);
       } else {
         setAiDisplay(finalDisplay);

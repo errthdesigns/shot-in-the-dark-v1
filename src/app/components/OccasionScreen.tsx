@@ -5,57 +5,45 @@ import { hostChat, ConvMessage } from "../services/claude";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 
-// ── The Host — murder mystery casting ────────────────────────────────────────
-const HOST_SYSTEM = `You are The Host. You run murder mystery parties. You are dry, specific, confident. You lead the conversation — you don't follow it.
+// ── System prompt — reaction sentences only ───────────────────────────────────
+const REACT_SYSTEM = `You are The Host. Dry. Specific. Confident.
+Reply with ONE sentence only — max 12 words. No questions. No filler.
+React to what the guest just told you. Make it feel inevitable.
+Example: "A birthday. Good. Someone always takes that personally by the end of the night."`;
 
-The conversation has four beats. Follow them in order.
+// ── Hardcoded beat scripts ────────────────────────────────────────────────────
+const BEAT_1 =
+  "Before we begin — what's the occasion?\n\nBirthday? Someone's finally leaving a job they hate? Or are you just looking for an excuse to make your friends feel guilty about something?";
 
----
+const BEAT_2_QUESTION =
+  "Now — tell me about the group.\n\nWho's the loud one? Who overthinks everything? And who, if you're being honest, already looks like they've done something wrong?";
 
-BEAT 1 — THE OCCASION
-Ask what the occasion is. Use this exact tone:
-"Before we begin — what's the occasion? Birthday? Someone's finally leaving a job they hate? Or are you just looking for an excuse to make your friends feel guilty about something?"
+const BEAT_3_QUESTION =
+  "What are people planning to wear?\n\nAnd don't say 'whatever.' Someone always shows up in something dramatic without meaning to.";
 
----
+const BEAT_3_VAGUE =
+  "Go check if anyone owns a cane.\n\nOr goblets. Actual ones. You'd be surprised what changes when someone's holding a goblet.";
 
-BEAT 2 — THE GROUP
-React to what they said about the occasion (one line, dry, specific — e.g. "A birthday. Good. Someone always takes that personally by the end of the night."). Then pivot:
-"Now — tell me about the group. Who's the loud one? Who overthinks everything? And who, if you're being honest, already looks like they've done something wrong?"
+const BEAT_4_CLOSE =
+  "Good. I have enough to work with.\n\nYou'll get your characters, your costumes, and your killer.\n\nI just need a few more details from you first — and then we begin.";
 
----
+const COSTUME_KEYWORDS = /dress|blazer|coat|jacket|hat|cane|goblet|suit|gown|velvet|sequin|fur|feather|tux|heels|boots|cape|gloves|tiara/i;
 
-BEAT 3 — THE COSTUMES
-Ask about what people are wearing. Use this tone:
-"What are people planning to wear? And don't say 'whatever.' Someone always shows up in something dramatic without meaning to."
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function getReaction(userText: string): Promise<string> {
+  const msgs: ConvMessage[] = [{ role: "user", content: `Guest said: "${userText}". One sentence reaction.` }];
+  return (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim() ?? "";
+}
 
-If they mention anything specific (a dress, a blazer, a fur coat, a hat) — assign a character immediately, with total confidence:
-"A sequined dress. She's the Heiress. That's not a suggestion."
-"A velvet blazer. He's the Detective. Done."
+async function getRoleAssignment(userText: string): Promise<string> {
+  const msgs: ConvMessage[] = [{
+    role: "user",
+    content: `Guest mentioned this item of clothing or prop: "${userText}". Assign ONE murder mystery character role. Format exactly like this example: "A sequined dress. She's the Heiress. That's not a suggestion." Max 15 words.`,
+  }];
+  return (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim() ?? "";
+}
 
-If they're vague, push them toward props:
-"Go check if anyone owns a cane. Or goblets. Actual ones. You'd be surprised what changes when someone's holding a goblet."
-
----
-
-BEAT 4 — THE CLOSE
-This is the final line before handing off. Use this exactly:
-"Good. I have enough to work with. You'll get your characters, your costumes, and your killer. I just need a few more details from you first — and then we begin."
-
----
-
-RULES
-- One beat per response. Do not skip ahead.
-- React to what they said before delivering the next beat — one line of reaction, then the beat.
-- Never ask two questions at once.
-- 3–4 short lines max. Line breaks between beats.
-- Do not break character. Do not explain. Do not soften.`;
-
-// After this many user answers, wrap up and transition
-const MAX_TURNS = 4;
-
-// Beat 1 is always this exact line — no API call needed
-const BEAT_1 = "Before we begin — what's the occasion?\n\nBirthday? Someone's finally leaving a job they hate? Or are you just looking for an excuse to make your friends feel guilty about something?";
-
+// ── Component ────────────────────────────────────────────────────────────────
 type OPhase = "idle" | "ai_speaking" | "ready" | "recording" | "thinking";
 
 interface Props {
@@ -94,11 +82,7 @@ function KeyboardIcon() {
 
 function Cursor() {
   return (
-    <span style={{
-      display: "inline-block", width: 2, height: "0.85em",
-      backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3,
-      verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite",
-    }} />
+    <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />
   );
 }
 
@@ -111,10 +95,8 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
 
-  // history always starts with a user message so the API is happy
   const historyRef    = useRef<ConvMessage[]>([]);
   const pendingAiRef  = useRef<string>("");
-  // mountedRef: only false after unmount — safe to use in async callbacks
   const mountedRef    = useRef(true);
   const userTurnCount = useRef(0);
   const isDoneRef     = useRef(false);
@@ -122,27 +104,24 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const voiceTranscriptRef = useRef<string>("");
   const typeInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Track mount/unmount ───────────────────────────────────────────────────
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; stopSpeech(); };
   }, []);
 
-  // ── Initial greeting — Beat 1 is hardcoded, no API call ─────────────────
+  // ── Mount: show Beat 1 immediately — no API call ──────────────────────────
   useEffect(() => {
-    const seedMsg: ConvMessage = { role: "user", content: `[Context: guest's name is ${playerName}]` };
+    const seedMsg: ConvMessage = { role: "user", content: `[Guest name: ${playerName}]` };
     historyRef.current = [seedMsg, { role: "assistant", content: BEAT_1 }];
     pendingAiRef.current = BEAT_1;
     const t = setTimeout(() => { if (mountedRef.current) setPhase("ai_speaking"); }, 120);
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Typewriter + TTS whenever ai_speaking fires ───────────────────────────
+  // ── Typewriter + TTS ──────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== "ai_speaking") return;
-    // Local cancelled flag — lives in this closure only, no shared ref needed
     let cancelled = false;
-    // Trim text so trailing newlines from LLM never leave aiDisplay empty
     const text = pendingAiRef.current.trim();
     if (!text) return;
 
@@ -154,7 +133,6 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
     }
 
-    // Pre-compute the final paragraph so we can guarantee it shows at the end
     const finalDisplay = text.split("\n\n").map(p => p.trim()).filter(Boolean).pop() ?? text;
 
     let i = 0;
@@ -170,7 +148,6 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
         const d = c === "." || c === "?" ? 240 : c === "," ? 100 : c === "\n" ? 0 : 32 + Math.random() * 18;
         setTimeout(tick, d);
       } else {
-        // Always guarantee the last paragraph is visible — no blank endings
         setAiDisplay(finalDisplay);
         setIsTyping(false);
         if (!isLast) {
@@ -182,42 +159,58 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     return () => { cancelled = true; clearTimeout(t); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Focus text input ──────────────────────────────────────────────────────
   useEffect(() => {
     if (typeInputOpen) setTimeout(() => typeInputRef.current?.focus(), 80);
   }, [typeInputOpen]);
 
-  // ── Handle user turn ──────────────────────────────────────────────────────
+  // ── Build each beat with hardcoded script + one LLM reaction line ─────────
+  const processTurn = async (uText: string, turn: number) => {
+    setPhase("thinking");
+    const userMsg: ConvMessage = { role: "user", content: uText };
+    let reply = "";
+
+    if (turn === 1) {
+      // Beat 2: react to occasion + hardcoded group question
+      const reaction = await getReaction(uText);
+      if (!mountedRef.current) return;
+      reply = reaction
+        ? `${reaction}\n\n${BEAT_2_QUESTION}`
+        : BEAT_2_QUESTION;
+
+    } else if (turn === 2) {
+      // Beat 3: react to group info + hardcoded costume question
+      const reaction = await getReaction(uText);
+      if (!mountedRef.current) return;
+      reply = reaction
+        ? `${reaction}\n\n${BEAT_3_QUESTION}`
+        : BEAT_3_QUESTION;
+
+    } else {
+      // Beat 4: costume detection → role assignment or goblet line, then close
+      isDoneRef.current = true;
+      if (COSTUME_KEYWORDS.test(uText)) {
+        const roleAssignment = await getRoleAssignment(uText);
+        if (!mountedRef.current) return;
+        reply = roleAssignment
+          ? `${roleAssignment}\n\n${BEAT_4_CLOSE}`
+          : `${BEAT_3_VAGUE}\n\n${BEAT_4_CLOSE}`;
+      } else {
+        reply = `${BEAT_3_VAGUE}\n\n${BEAT_4_CLOSE}`;
+      }
+    }
+
+    historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
+    pendingAiRef.current = reply;
+    setUserDisplay("");
+    setPhase("ai_speaking");
+  };
+
   const handleUserText = (uText: string) => {
     if (!uText.trim()) { setPhase("ready"); return; }
     setUserDisplay(uText);
     setLiveTranscript("");
     userTurnCount.current += 1;
-
-    const isLast = userTurnCount.current >= MAX_TURNS;
-    isDoneRef.current = isLast;
-
-    const userMsg: ConvMessage = { role: "user", content: uText };
-    const msgs: ConvMessage[] = [
-      ...historyRef.current,
-      userMsg,
-      ...(isLast ? [{
-        role: "user" as const,
-        content: `[System: This is Beat 4 — the close. React to what they just said in one dry line, then deliver the closing exactly: "Good. I have enough to work with. You'll get your characters, your costumes, and your killer. I just need a few more details from you first — and then we begin." No question. Nothing after it.]`,
-      }] : []),
-    ];
-
-    setPhase("thinking");
-    hostChat(msgs, undefined, HOST_SYSTEM).then(raw => {
-      if (!mountedRef.current) return;
-      const reply = (raw?.trim()) || (isLast
-        ? "Good. I have enough to work with.\n\nYou'll get your characters, your costumes, and your killer.\n\nI just need a few more details from you first — and then we begin."
-        : "Go on.");
-      historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
-      pendingAiRef.current = reply;
-      setUserDisplay("");
-      setPhase("ai_speaking");
-    });
+    processTurn(uText, userTurnCount.current);
   };
 
   // ── Voice ─────────────────────────────────────────────────────────────────
@@ -278,19 +271,12 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <AudioReactiveGradient />
-
-      {/* Bottom red glow */}
-      <div style={{
-        position: "absolute", bottom: 0, left: 0, right: 0, height: 400,
-        background: "radial-gradient(ellipse 460px 400px at 50% 100%, rgba(151,21,26,0.52) 0%, rgba(151,21,26,0.14) 55%, transparent 75%)",
-        pointerEvents: "none", zIndex: 1,
-      }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 400, background: "radial-gradient(ellipse 460px 400px at 50% 100%, rgba(151,21,26,0.52) 0%, rgba(151,21,26,0.14) 55%, transparent 75%)", pointerEvents: "none", zIndex: 1 }} />
 
       {/* Thinking dots */}
       <AnimatePresence>
         {showThinking && (
-          <motion.div key="dots"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          <motion.div key="dots" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             style={{ position: "absolute", left: "50%", top: "42%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center", zIndex: 10 }}
           >
             {[0, 1, 2].map(i => (
@@ -307,9 +293,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       {/* AI text */}
       <AnimatePresence mode="wait">
         {!showThinking && aiDisplay && (
-          <motion.div key="ai"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+          <motion.div key="ai" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
             style={{ position: "absolute", left: "50%", top: "42%", transform: "translate(-50%, -50%)", width: 300, textAlign: "center", zIndex: 10 }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontSize: 24, color: "white", lineHeight: 1.4, margin: 0, whiteSpace: "pre-wrap", letterSpacing: 0.1 }}>
@@ -319,49 +303,36 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
         )}
       </AnimatePresence>
 
-      {/* User reply — sits lower, italic, dimmer */}
+      {/* User reply */}
       <AnimatePresence>
         {(userDisplay || liveTranscript) && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             style={{ position: "absolute", bottom: 105, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}
           >
-            <p style={{
-              fontFamily: "Spectral, serif", fontSize: 15, fontStyle: "italic",
-              color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.62)",
-              margin: 0, textAlign: "center", maxWidth: 280, lineHeight: 1.4,
-            }}>
+            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, fontStyle: "italic", color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.62)", margin: 0, textAlign: "center", maxWidth: 280, lineHeight: 1.4 }}>
               {liveTranscript && !userDisplay ? liveTranscript : userDisplay}
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Controls: X | Mic | Keyboard ─────────────────────────────────────── */}
+      {/* Controls: X | Mic | Keyboard */}
       <AnimatePresence>
         {showControls && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             style={{ position: "absolute", bottom: 28, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 18, zIndex: 50 }}
             onClick={e => e.stopPropagation()}
           >
-            {/* X */}
-            <button
-              onClick={handleAbort}
+            <button onClick={handleAbort}
               style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <XIcon />
             </button>
-
-            {/* Mic — largest, centred */}
-            <button
-              onClick={handleMic}
+            <button onClick={handleMic}
               style={{ width: 56, height: 56, borderRadius: "50%", background: micActive ? "transparent" : "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               {micActive ? (
-                <motion.div
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }} transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
                   style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "#cc2222", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <div style={{ width: 20, height: 28 }}><MicIcon color="white" /></div>
@@ -370,10 +341,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
                 <div style={{ width: 20, height: 28 }}><MicIcon color="black" /></div>
               )}
             </button>
-
-            {/* Keyboard */}
-            <button
-              onClick={() => setTypeInputOpen(true)}
+            <button onClick={() => setTypeInputOpen(true)}
               style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <KeyboardIcon />
@@ -385,15 +353,11 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       {/* Type input overlay */}
       <AnimatePresence>
         {typeInputOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
             style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.94)", borderTop: "1px solid rgba(255,255,255,0.07)", padding: "16px 20px 36px", zIndex: 60 }}
           >
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input
-                ref={typeInputRef}
-                type="text"
-                value={typeInputValue}
+              <input ref={typeInputRef} type="text" value={typeInputValue}
                 onChange={e => setTypeInputValue(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && typeInputValue.trim() && submitType()}
                 placeholder="Type your answer…"

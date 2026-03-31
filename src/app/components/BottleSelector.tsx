@@ -106,9 +106,12 @@ export function BottleSelector({ onSelect }: Props) {
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
               />
 
-
-
-            </div>
+              {/* Bottom gradient + copy text */}
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.72) 100%)" }} />
+              <div style={{ position: "absolute", bottom: 108, left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}>
+                <p style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 11, color: "rgba(255,255,255,0.6)", letterSpacing: 3.5, textTransform: "uppercase", margin: "0 0 6px" }}>{bottle.brand}</p>
+                <p style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontStyle: "italic", fontSize: 32, color: "white", letterSpacing: -0.5, margin: 0, lineHeight: 1 }}>{bottle.name}</p>
+              </div>            </div>
           );
         })}
       </div>

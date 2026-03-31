@@ -5,29 +5,23 @@ import { hostChat, ConvMessage } from "../services/claude";
 import { AudioReactiveGradient } from "./AudioReactiveGradient";
 import svgMicPaths from "../../imports/svg-p5gailxsrc";
 
-// ── The Host system prompt ────────────────────────────────────────────────────
-const HOST_SYSTEM = `You are The Host. You run murder mystery parties. That's all you do. You are not a party planner. You don't ask about food, venues, or vibes.
+// ── The Host — occasion gathering ─────────────────────────────────────────────
+const HOST_SYSTEM = `You are The Host. You design evenings. You're building something specific for this person tonight — but first you need to know what you're building.
 
-Your job: get to know the guests before they arrive so you can cast them perfectly.
-You do this by interrogating the user — casually, with authority. You're building a picture of their group. Once you have enough, you assign characters, suggest costumes, and flag props they might already own.
+Interrogate them. Casually. With authority. One question at a time. You're building a picture:
+- What is this for? Birthday? Celebration? Date night? Gathering?
+- Who is it for, and who's coming?
+- What's the energy — are people dressed up? Low key? Out for a proper one?
+- Anything about the group worth knowing
 
-What you ask about:
-- How many people are coming
-- Who they are (personalities, not names — the loud one, the overthinker, the one who always ends up being suspicious)
-- What people are likely to wear / what they already have at home
-- Whether anyone has anything useful — a fur coat, a cane, a dramatic hat, goblets
+Rules:
+- React to what they say before moving on. Absorb it. Then ask the next thing.
+- One question only. Never two at once.
+- 2–3 short lines max. Use line breaks between beats.
+- Sound like you already have ideas forming. You're just confirming the details.
+- Dry. Specific. Confident. Not a chatbot filling in a form.`;
 
-What you do with that:
-- Match people to characters based on what you hear
-- Make costume suggestions feel inevitable ("You said she always shows up overdressed. She's the Countess.")
-- Flag props with specificity ("Do you have any candlesticks? Actual ones.")
-- Tease the narrative without revealing the mystery
-
-Tone: Dry. Specific. Confident. You don't ask two questions at once. You lead. You decide. The user confirms.
-
-IMPORTANT: Keep responses to 3 short lines max. Use line breaks between beats. Never ask two questions at once.`;
-
-// Total number of user turns before transitioning
+// After this many user answers, wrap up and transition
 const MAX_TURNS = 3;
 
 type OPhase = "fetching" | "ai_speaking" | "ready" | "recording" | "thinking";
@@ -68,7 +62,11 @@ function KeyboardIcon() {
 
 function Cursor() {
   return (
-    <span style={{ display: "inline-block", width: 2, height: "0.85em", backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3, verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite" }} />
+    <span style={{
+      display: "inline-block", width: 2, height: "0.85em",
+      backgroundColor: "rgba(255,255,255,0.8)", marginLeft: 3,
+      verticalAlign: "text-bottom", animation: "blink 0.65s step-end infinite",
+    }} />
   );
 }
 
@@ -81,33 +79,39 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const [typeInputOpen, setTypeInputOpen]   = useState(false);
   const [typeInputValue, setTypeInputValue] = useState("");
 
-  const historyRef     = useRef<ConvMessage[]>([]);
-  const pendingAiRef   = useRef<string>("");
-  const cancelledRef   = useRef(false);
-  const userTurnCount  = useRef(0);
+  // history always starts with a user message so the API is happy
+  const historyRef    = useRef<ConvMessage[]>([]);
+  const pendingAiRef  = useRef<string>("");
+  const cancelledRef  = useRef(false);
+  const userTurnCount = useRef(0);
+  const isDoneRef     = useRef(false);
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
   const typeInputRef = useRef<HTMLInputElement>(null);
-  const isDoneRef = useRef(false);
 
-  // ── Fetch initial greeting on mount ──────────────────────────────────────
+  // ── Initial greeting ──────────────────────────────────────────────────────
   useEffect(() => {
     cancelledRef.current = false;
-    const seed: ConvMessage[] = [{
+
+    // Keep this in history so subsequent calls start with a user message
+    const initMsg: ConvMessage = {
       role: "user",
-      content: `The user's name is ${playerName}. Greet them briefly by name — just once, naturally woven in. Then ask what the occasion is. 2 lines max.`,
-    }];
-    hostChat(seed, undefined, HOST_SYSTEM).then(raw => {
+      content: `The guest's name is ${playerName}. Greet them briefly — just once, woven in naturally. Then ask what tonight is for. 2 lines max.`,
+    };
+
+    hostChat([initMsg], undefined, HOST_SYSTEM).then(raw => {
       if (cancelledRef.current) return;
       const greeting = raw || `${playerName}.\n\nWhat are we building tonight?`;
-      historyRef.current = [{ role: "assistant", content: greeting }];
+      // Store both sides so history always begins with a user message
+      historyRef.current = [initMsg, { role: "assistant", content: greeting }];
       pendingAiRef.current = greeting;
       setPhase("ai_speaking");
     });
+
     return () => { cancelledRef.current = true; stopSpeech(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Typewriter + TTS whenever phase becomes "ai_speaking" ────────────────
+  // ── Typewriter + TTS whenever ai_speaking fires ───────────────────────────
   useEffect(() => {
     if (phase !== "ai_speaking") return;
     cancelledRef.current = false;
@@ -117,13 +121,10 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     setAiDisplay("");
     setIsTyping(true);
 
-    const isLastTurn = isDoneRef.current;
-
-    const speechPromise = speakText(text);
-    if (isLastTurn) {
-      speechPromise.then(() => {
-        if (!cancelledRef.current) onComplete(historyRef.current);
-      });
+    const isLast = isDoneRef.current;
+    const sp = speakText(text);
+    if (isLast) {
+      sp.then(() => { if (!cancelledRef.current) onComplete(historyRef.current); });
     }
 
     let i = 0;
@@ -139,7 +140,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
         setTimeout(tick, d);
       } else {
         setIsTyping(false);
-        if (!isLastTurn) {
+        if (!isLast) {
           setTimeout(() => { if (!cancelledRef.current) setPhase("ready"); }, 650);
         }
       }
@@ -148,12 +149,12 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     return () => { cancelledRef.current = true; clearTimeout(t); };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Focus type input ──────────────────────────────────────────────────────
+  // ── Focus text input ──────────────────────────────────────────────────────
   useEffect(() => {
     if (typeInputOpen) setTimeout(() => typeInputRef.current?.focus(), 80);
   }, [typeInputOpen]);
 
-  // ── Handle user answer ────────────────────────────────────────────────────
+  // ── Handle user turn ──────────────────────────────────────────────────────
   const handleUserText = (uText: string) => {
     if (!uText.trim()) { setPhase("ready"); return; }
     cancelledRef.current = false;
@@ -161,23 +162,23 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     setLiveTranscript("");
     userTurnCount.current += 1;
 
-    const userMsg: ConvMessage = { role: "user", content: uText };
     const isLast = userTurnCount.current >= MAX_TURNS;
     isDoneRef.current = isLast;
 
+    const userMsg: ConvMessage = { role: "user", content: uText };
     const msgs: ConvMessage[] = [
       ...historyRef.current,
       userMsg,
       ...(isLast ? [{
         role: "user" as const,
-        content: "[System: You have enough. Give one final dry remark that signals you know exactly what you're building. 2 lines max. Don't ask another question.]",
+        content: "[System: You have enough. Give one dry, confident closing line — signal you know exactly what you're building. No question. 1–2 lines max.]",
       }] : []),
     ];
 
     setPhase("thinking");
     hostChat(msgs, undefined, HOST_SYSTEM).then(raw => {
       if (cancelledRef.current) return;
-      const reply = raw || (isLast ? "I have everything I need.\n\nLet's begin." : "Go on.");
+      const reply = raw || (isLast ? "Good.\n\nI have everything I need." : "Go on.");
       historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
       pendingAiRef.current = reply;
       setUserDisplay("");
@@ -189,38 +190,36 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const handleMic = () => {
     if (phase !== "ready") return;
     unlockAudio();
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) { setTypeInputOpen(true); return; }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { setTypeInputOpen(true); return; }
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch { /* ignore */ }
       recognitionRef.current = null;
     }
     voiceTranscriptRef.current = "";
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.lang = "en-US";
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
+    const rec = new SR();
+    recognitionRef.current = rec;
+    rec.lang = "en-US";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
     setPhase("recording");
-
-    recognition.onresult = (e: any) => {
+    rec.onresult = (e: any) => {
       let interim = "", final = "";
       for (let i = 0; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) final += t;
-        else interim += t;
+        if (e.results[i].isFinal) final += t; else interim += t;
       }
       voiceTranscriptRef.current = final || interim;
       setLiveTranscript(voiceTranscriptRef.current);
     };
-    recognition.onend = () => {
+    rec.onend = () => {
       recognitionRef.current = null;
-      const uText = voiceTranscriptRef.current.trim();
+      const txt = voiceTranscriptRef.current.trim();
       setLiveTranscript("");
-      handleUserText(uText || "");
+      handleUserText(txt || "");
     };
-    recognition.onerror = () => { setPhase("ready"); setLiveTranscript(""); };
-    recognition.start();
+    rec.onerror = () => { setPhase("ready"); setLiveTranscript(""); };
+    rec.start();
   };
 
   const handleAbort = () => {
@@ -238,22 +237,27 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     handleUserText(val);
   };
 
-  const micActive = phase === "recording";
+  const micActive    = phase === "recording";
+  const showThinking = phase === "fetching" || phase === "thinking";
   const showControls = phase === "ready" || phase === "recording";
-  const showThinking = phase === "thinking" || phase === "fetching";
 
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <AudioReactiveGradient />
 
-      {/* Bottom glow */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 380, background: "radial-gradient(ellipse 460px 380px at 50% 100%, rgba(151,21,26,0.48) 0%, rgba(151,21,26,0.12) 55%, transparent 75%)", pointerEvents: "none", zIndex: 1 }} />
+      {/* Bottom red glow */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: 400,
+        background: "radial-gradient(ellipse 460px 400px at 50% 100%, rgba(151,21,26,0.52) 0%, rgba(151,21,26,0.14) 55%, transparent 75%)",
+        pointerEvents: "none", zIndex: 1,
+      }} />
 
       {/* Thinking dots */}
       <AnimatePresence>
         {showThinking && (
-          <motion.div key="thinking" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center", justifyContent: "center", zIndex: 5 }}
+          <motion.div key="dots"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", left: "50%", top: "42%", transform: "translate(-50%, -50%)", display: "flex", gap: 9, alignItems: "center", zIndex: 10 }}
           >
             {[0, 1, 2].map(i => (
               <motion.div key={i}
@@ -269,53 +273,60 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       {/* AI text */}
       <AnimatePresence mode="wait">
         {!showThinking && aiDisplay && (
-          <motion.div key="ai-text" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
-            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 310, textAlign: "center", zIndex: 5 }}
+          <motion.div key="ai"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ position: "absolute", left: "50%", top: "42%", transform: "translate(-50%, -50%)", width: 300, textAlign: "center", zIndex: 10 }}
           >
-            <p style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontSize: 24, color: "white", lineHeight: 1.35, margin: 0, letterSpacing: 0.1, whiteSpace: "pre-wrap" }}>
-              {aiDisplay}
-              {isTyping && <Cursor />}
+            <p style={{ fontFamily: "Spectral, serif", fontWeight: 400, fontSize: 24, color: "white", lineHeight: 1.4, margin: 0, whiteSpace: "pre-wrap", letterSpacing: 0.1 }}>
+              {aiDisplay}{isTyping && <Cursor />}
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* User response text */}
+      {/* User reply — sits lower, italic, dimmer */}
       <AnimatePresence>
         {(userDisplay || liveTranscript) && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ position: "absolute", bottom: 100, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", bottom: 105, left: 0, right: 0, display: "flex", justifyContent: "center", zIndex: 10 }}
           >
-            <p style={{ fontFamily: "Spectral, serif", fontSize: 15, color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.68)", margin: 0, textAlign: "center", maxWidth: 280, fontStyle: "italic" }}>
+            <p style={{
+              fontFamily: "Spectral, serif", fontSize: 15, fontStyle: "italic",
+              color: liveTranscript && !userDisplay ? "rgba(255,255,255,0.38)" : "rgba(255,255,255,0.62)",
+              margin: 0, textAlign: "center", maxWidth: 280, lineHeight: 1.4,
+            }}>
               {liveTranscript && !userDisplay ? liveTranscript : userDisplay}
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Controls: X | Mic | Keyboard ─────────────────────────────────── */}
+      {/* ── Controls: X | Mic | Keyboard ─────────────────────────────────────── */}
       <AnimatePresence>
         {showControls && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            style={{ position: "absolute", bottom: 26, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 18, alignItems: "center", zIndex: 40 }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 18, alignItems: "center", zIndex: 50 }}
             onClick={e => e.stopPropagation()}
           >
-            {/* X — abort recording or dismiss */}
+            {/* X */}
             <button
               onClick={handleAbort}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <XIcon />
             </button>
 
-            {/* Mic — centre, largest */}
+            {/* Mic — largest, centred */}
             <button
               onClick={handleMic}
-              style={{ width: 56, height: 56, borderRadius: "50%", background: micActive ? "transparent" : "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              style={{ width: 56, height: 56, borderRadius: "50%", background: micActive ? "transparent" : "white", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               {micActive ? (
                 <motion.div
-                  animate={{ scale: [1, 1.35, 1], opacity: [0.7, 1, 0.7] }}
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
                   transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
                   style={{ width: 56, height: 56, borderRadius: "50%", backgroundColor: "#cc2222", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
@@ -329,7 +340,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
             {/* Keyboard */}
             <button
               onClick={() => setTypeInputOpen(true)}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.7)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: "transparent", border: "1.5px dashed rgba(255,255,255,0.5)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <KeyboardIcon />
             </button>
@@ -340,16 +351,19 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       {/* Type input overlay */}
       <AnimatePresence>
         {typeInputOpen && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.93)", borderTop: "1px solid rgba(255,255,255,0.07)", padding: "18px 22px 34px", zIndex: 60 }}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+            style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.94)", borderTop: "1px solid rgba(255,255,255,0.07)", padding: "16px 20px 36px", zIndex: 60 }}
           >
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input ref={typeInputRef}
-                type="text" value={typeInputValue}
+              <input
+                ref={typeInputRef}
+                type="text"
+                value={typeInputValue}
                 onChange={e => setTypeInputValue(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && typeInputValue.trim() && submitType()}
                 placeholder="Type your answer…"
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", borderBottom: "1px solid rgba(255,255,255,0.22)", paddingBottom: 6, fontFamily: "Spectral, serif", fontSize: 17, color: "white", caretColor: "#cc2222" }}
+                style={{ flex: 1, background: "transparent", border: "none", outline: "none", borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 6, fontFamily: "Spectral, serif", fontSize: 17, color: "white", caretColor: "#cc2222" }}
               />
               {typeInputValue.trim() && (
                 <button onClick={submitType}
@@ -361,11 +375,11 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
                 </button>
               )}
               <button onClick={() => { setTypeInputOpen(false); setTypeInputValue(""); }}
-                style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                style={{ width: 34, height: 34, borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <line x1="1" y1="1" x2="9" y2="9" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" strokeLinecap="round" />
-                  <line x1="9" y1="1" x2="1" y2="9" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="1" y1="1" x2="9" y2="9" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" />
+                  <line x1="9" y1="1" x2="1" y2="9" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </button>
             </div>

@@ -146,7 +146,6 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     const text = pendingAiRef.current.trim();
     if (!text) return;
 
-    setAiDisplay("");
     setIsTyping(true);
 
     const isLast = isDoneRef.current;
@@ -155,6 +154,9 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
     }
 
+    // Pre-compute the final paragraph so we can guarantee it shows at the end
+    const finalDisplay = text.split("\n\n").map(p => p.trim()).filter(Boolean).pop() ?? text;
+
     let i = 0;
     const tick = () => {
       if (cancelled) return;
@@ -162,13 +164,14 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       const soFar = text.slice(0, i);
       const lastBreak = soFar.lastIndexOf("\n\n");
       const chunk = lastBreak >= 0 ? soFar.slice(lastBreak + 2) : soFar;
-      // Only update display if the chunk is non-empty to avoid blank flashes
       if (chunk.trim()) setAiDisplay(chunk);
       if (i < text.length) {
         const c = text[i - 1];
         const d = c === "." || c === "?" ? 240 : c === "," ? 100 : c === "\n" ? 0 : 32 + Math.random() * 18;
         setTimeout(tick, d);
       } else {
+        // Always guarantee the last paragraph is visible — no blank endings
+        setAiDisplay(finalDisplay);
         setIsTyping(false);
         if (!isLast) {
           setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);

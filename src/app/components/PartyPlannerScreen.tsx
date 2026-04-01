@@ -119,27 +119,16 @@ const WESTERN_DEFS: IngredientDef[] = [
 // ── Cocktail keyword-spawn defs — images fly in as user/LLM mentions flavours ─
 // keywords matched against aiDisplay + userDisplay combined (case-insensitive)
 const COCKTAIL_DEFS: IngredientDef[] = [
-  { keyword: "strawberry", src: imgIngredientStrawberry, x:0, y:0, w:170, h:135, radius:14, rotZ:-4.2, cx: -90, cy:  130 },
-  { keyword: "raspberry",  src: imgDrinkA,               x:0, y:0, w:150, h:165, radius:14, rotZ: 5.8, cx:  120, cy:  -85 },
-  { keyword: "lemon",      src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ:-3.1, cx:  -30, cy: -175 },
-  { keyword: "citrus",     src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ: 4.3, cx:  145, cy: -120 },
-  { keyword: "citr",       src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ: 2.7, cx:   75, cy:  -35 },
-  { keyword: "citru",      src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ:-5.1, cx:  -70, cy:  115 },
-  { keyword: "grapefruit", src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ:-5.9, cx: -135, cy:  -95 },
-  { keyword: "lime",       src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ: 4.1, cx:   60, cy:  170 },
-  { keyword: "chilli",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 3.8, cx:  -80, cy:  160 },
-  { keyword: "spic",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
-  { keyword: "heat",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 5.5, cx:  -30, cy:   70 },
-  { keyword: "pepper",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-3.3, cx:  100, cy: -155 },
-  { keyword: "chili",      src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 7.1, cx: -120, cy:  130 },
-  { keyword: "honey",      src: imgCocktailHoney,         x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
-  { keyword: "mint",       src: imgCocktailMint,          x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
-  { keyword: "sweet",      src: imgCocktailSweet,         x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
-  { keyword: "sour",       src: imgCocktailSour,          x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
-  { keyword: "bitter",     src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
-  { keyword: "smok",       src: imgDrinkC,                x:0, y:0, w:175, h:145, radius:14, rotZ:-5.1, cx: -120, cy:  -60 },
-  { keyword: "dark",       src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ: 2.5, cx:  -10, cy:  140 },
-  { keyword: "agave",      src: imgPalomaAgave,           x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
+  { keyword: "lemon",      src: imgCocktailLemon,      x:0, y:0, w:148, h:148, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
+  { keyword: "grapefruit", src: imgCocktailGrapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ:-5.9, cx: -135, cy:  -95 },
+  { keyword: "lime",       src: imgCocktailLime,       x:0, y:0, w:142, h:142, radius:14, rotZ: 4.1, cx:   60, cy:  170 },
+  { keyword: "spic",       src: imgCocktailChilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
+  { keyword: "honey",      src: imgCocktailHoney,      x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
+  { keyword: "mint",       src: imgCocktailMint,       x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
+  { keyword: "sweet",      src: imgCocktailSweet,      x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
+  { keyword: "sour",       src: imgCocktailSour,       x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
+  { keyword: "bitter",     src: imgCocktailBitter,     x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
+  { keyword: "agave",      src: imgPalomaAgave,        x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────

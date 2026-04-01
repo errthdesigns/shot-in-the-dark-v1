@@ -135,18 +135,25 @@ export function BottleSelector({ onSelect }: Props) {
         })}
       </div>
 
-      {/* ── Page dots ── */}
+      {/* ── Page dots + swipe hint ── */}
       <div style={{
         position: "absolute", bottom: 72, left: 0, right: 0,
-        display: "flex", justifyContent: "center", gap: 8, pointerEvents: "none",
+        display: "flex", justifyContent: "center", alignItems: "center", gap: 12, pointerEvents: "none",
       }}>
-        {BOTTLES.map((_, i) => (
-          <div key={i} style={{
-            width: i === activePage ? 18 : 6, height: 6, borderRadius: 3,
-            backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
-            transition: "all 0.25s ease",
-          }} />
-        ))}
+        <motion.p
+          animate={{ opacity: activePage === 0 ? 0.38 : 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ fontFamily: "Inter, sans-serif", fontSize: 9, color: "white", letterSpacing: 2.5, textTransform: "uppercase", margin: 0 }}
+        >swipe</motion.p>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {BOTTLES.map((_, i) => (
+            <div key={i} style={{
+              width: i === activePage ? 18 : 6, height: 6, borderRadius: 3,
+              backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
+              transition: "all 0.25s ease",
+            }} />
+          ))}
+        </div>
       </div>
 
       {/* ── Break flash — white flare on select ── */}

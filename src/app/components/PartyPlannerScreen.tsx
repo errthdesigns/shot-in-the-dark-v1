@@ -52,7 +52,6 @@ import imgCocktailSour       from "../../assets/Cocktail/Sour Cocktail.jpg";
 import imgCocktailSweet      from "../../assets/Cocktail/Sweet Cocktail.jpg";
 
 // ── Final reveal: cocktail video ─────────────────────────────────────────────
-import videoCocktail from "../../assets/Untitled (71).mp4";
 import videoCocktail2 from "../../assets/Cocktail Vid 2.mp4";
 import { OccasionScreen } from "./OccasionScreen";
 import { hostChat, ConvMessage } from "../services/claude";
@@ -141,7 +140,7 @@ const COCKTAIL_DEFS: IngredientDef[] = [
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
 type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice";
-type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "recipe" | "cart" | "apple-pay" | "cocktail" | "cocktail2";
+type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "recipe" | "cart" | "apple-pay" | "cocktail2";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -170,8 +169,6 @@ const STEPS: Step[] = [
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail2", noVoice: true },
   // 8 — cocktail reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 9 — cocktail video
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
   // 9 — cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
   // 10 — apple pay
@@ -339,7 +336,7 @@ function EmailInputField({ index, value, onChange }: { index: number; value: str
 }
 
 // ─── Cocktail video card ──────────────────────────────────────────────────────
-function CocktailCard({ onComplete, src = videoCocktail }: { onComplete: () => void; src?: string }) {
+function CocktailCard({ onComplete, src }: { onComplete: () => void; src: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const skip = () => { videoRef.current?.pause(); onComplete(); };
   return (
@@ -869,7 +866,7 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking     = phase === "thinking";
-  const isPaymentView  = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail" || current.view === "cocktail2";
+  const isPaymentView  = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail2";
   const isBottleSelect = current.view === "bottle-select";
 
   return (
@@ -947,13 +944,6 @@ export function PartyPlannerScreen() {
       <AnimatePresence>
         {current.view === "cocktail2" && (
           <CocktailCard key="cocktail2" src={videoCocktail2} onComplete={() => setStep(s => Math.min(s + 1, STEPS.length - 1))} />
-        )}
-      </AnimatePresence>
-
-      {/* ── Cocktail video reveal ─────────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {current.view === "cocktail" && (
-          <CocktailCard key="cocktail" onComplete={() => setStep(s => Math.min(s + 1, STEPS.length - 1))} />
         )}
       </AnimatePresence>
 

@@ -792,7 +792,7 @@ export function PartyPlannerScreen() {
   // ── Effect 5: keyword-triggered image reveal ──────────────────────────────
   useEffect(() => {
     if (current.imgState !== "keyword-reveal") return;
-    const defsToCheck = FLAVOUR_STEPS.has(step) || step === REVEAL_STEP ? COCKTAIL_DEFS : WESTERN_DEFS;
+    const defsToCheck = FLAVOUR_STEPS.has(step) || step === ROUNDUP_STEP || step === REVEAL_STEP ? COCKTAIL_DEFS : WESTERN_DEFS;
     // Flavour Q steps: only reveal from user words. Roundup + reveal: AI text also triggers.
     const combined = FLAVOUR_STEPS.has(step)
       ? userDisplay.toLowerCase()

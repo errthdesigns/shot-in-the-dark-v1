@@ -12,15 +12,16 @@ interface CartScreenProps {
 }
 
 // Per-unit prices
-const P_TEQUILA    = 54.99; // 1 bottle per event
-const P_GRAPEFRUIT =  1.99; // per guest
-const P_LIME       =  0.99; // per guest
-const P_AGAVE      =  4.99; // 1 bottle per event
-const P_CILANTRO   =  1.99; // 1 bunch per event
+const P_TEQUILA    =  54.99; // 1 bottle per event
+const P_GRAPEFRUIT =   1.99; // per guest
+const P_LIME       =   0.99; // per guest
+const P_AGAVE      =   4.99; // 1 bottle per event
+const P_CILANTRO   =   1.99; // 1 bunch per event
+const P_SERVICE    =  50.00; // cocktail experience per guest (~$60/head total)
 
 /** Exported so PartyPlannerScreen can pass the same number to ApplePaySheet */
 export function calcCartTotal(guests: number): number {
-  return P_TEQUILA + guests * P_GRAPEFRUIT + guests * P_LIME + P_AGAVE + P_CILANTRO;
+  return P_TEQUILA + guests * (P_GRAPEFRUIT + P_LIME + P_SERVICE) + P_AGAVE + P_CILANTRO;
 }
 
 const ITEM_LABEL: React.CSSProperties = {
@@ -140,6 +141,18 @@ export function CartScreen({ onApplePay, guests = 6 }: CartScreenProps) {
           label="Fresh Cilantro ×1"
           price={`$${P_CILANTRO.toFixed(2)}`}
         />
+
+        {/* Cocktail Experience — per guest service fee */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>
+          <div style={{ flexShrink: 0, width: 58, height: 58, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>
+            🍹
+          </div>
+          <p style={ITEM_LABEL}>
+            Cocktail Experience{" "}
+            <span style={{ fontSize: 13, color: "#aaa", fontStyle: "normal" }}>×{guests}</span>
+          </p>
+          <p style={PRICE_LABEL}>${(P_SERVICE * guests).toFixed(2)}</p>
+        </div>
 
         {/* One Alibi — complimentary */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, paddingBottom: 18 }}>

@@ -52,7 +52,7 @@ import imgCocktailSour       from "../../assets/Cocktail/Sour Cocktail.jpg";
 import imgCocktailSweet      from "../../assets/Cocktail/Sweet Cocktail.jpg";
 
 // ── Final reveal: cocktail video ─────────────────────────────────────────────
-import videoCocktail from "../../assets/Untitled (71).mp4";
+import videoCocktail2 from "../../assets/Cocktail Vid 2.mp4";
 import { OccasionScreen } from "./OccasionScreen";
 import { hostChat, ConvMessage } from "../services/claude";
 
@@ -119,28 +119,22 @@ const WESTERN_DEFS: IngredientDef[] = [
 // ── Cocktail keyword-spawn defs — images fly in as user/LLM mentions flavours ─
 // keywords matched against aiDisplay + userDisplay combined (case-insensitive)
 const COCKTAIL_DEFS: IngredientDef[] = [
-  { keyword: "strawberry", src: imgIngredientStrawberry, x:0, y:0, w:170, h:135, radius:14, rotZ:-4.2, cx: -90, cy:  130 },
-  { keyword: "raspberry",  src: imgDrinkA,               x:0, y:0, w:150, h:165, radius:14, rotZ: 5.8, cx:  120, cy:  -85 },
-  { keyword: "lemon",      src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ:-3.1, cx:  -30, cy: -175 },
-  { keyword: "citrus",     src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ: 4.3, cx:  145, cy: -120 },
-  { keyword: "grapefruit", src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ:-5.9, cx: -135, cy:  -95 },
-  { keyword: "lime",       src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ: 4.1, cx:   60, cy:  170 },
-  { keyword: "chilli",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 3.8, cx:  -80, cy:  160 },
-  { keyword: "spic",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
-  { keyword: "honey",      src: imgCocktailHoney,         x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
-  { keyword: "mint",       src: imgCocktailMint,          x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
-  { keyword: "sweet",      src: imgCocktailSweet,         x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
-  { keyword: "sour",       src: imgCocktailSour,          x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
-  { keyword: "bitter",     src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
-  { keyword: "smok",       src: imgDrinkC,                x:0, y:0, w:175, h:145, radius:14, rotZ:-5.1, cx: -120, cy:  -60 },
-  { keyword: "dark",       src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ: 2.5, cx:  -10, cy:  140 },
-  { keyword: "agave",      src: imgPalomaAgave,           x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
+  { keyword: "lemon",      src: imgCocktailLemon,      x:0, y:0, w:148, h:148, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
+  { keyword: "grapefruit", src: imgCocktailGrapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ:-5.9, cx: -135, cy:  -95 },
+  { keyword: "lime",       src: imgCocktailLime,       x:0, y:0, w:142, h:142, radius:14, rotZ: 4.1, cx:   60, cy:  170 },
+  { keyword: "spic",       src: imgCocktailChilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
+  { keyword: "honey",      src: imgCocktailHoney,      x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
+  { keyword: "mint",       src: imgCocktailMint,       x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
+  { keyword: "sweet",      src: imgCocktailSweet,      x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
+  { keyword: "sour",       src: imgCocktailSour,       x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
+  { keyword: "bitter",     src: imgCocktailBitter,     x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
+  { keyword: "agave",      src: imgPalomaAgave,        x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Phase     = "thinking" | "ai_typing" | "ready" | "recording" | "transcribing";
 type ImgState  = "none" | "full" | "keyword-reveal" | "gatsby-reveal" | "drink-spice";
-type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "recipe" | "cart" | "apple-pay" | "cocktail";
+type ViewState = "chat" | "bottle-select" | "flavor-pick" | "invite" | "email" | "recipe" | "cart" | "apple-pay" | "cocktail2";
 
 interface Step {
   aiText: string; aiY: number; fontVariant?: "semibold-italic";
@@ -165,19 +159,22 @@ const STEPS: Step[] = [
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 7 — cocktail reveal (AI-generated, speechAdvance)
+  // 7 — flavour roundup (AI-generated, ingredients fly in, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — cocktail video
-  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
-  // 9 — cart
+  // 8 — cocktail vid 2 (plays after flavour builder void, before night reveal)
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail2", noVoice: true },
+  // 9 — cocktail reveal (AI-generated, speechAdvance)
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 10 — cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 10 — apple pay
+  // 11 — apple pay
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
 // ─── Flavour conversation ─────────────────────────────────────────────────────
-const FLAVOUR_STEPS = new Set([3, 4, 5, 6]);
-const REVEAL_STEP   = 7;
+const FLAVOUR_STEPS  = new Set([3, 4, 5, 6]);
+const ROUNDUP_STEP   = 7;
+const REVEAL_STEP    = 9;
 
 const FLAVOUR_Q1: Record<string, string> = {
   reposado:   "Solid choice.\n\nThe Reposado — golden, a little smoky, smooth finish.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
@@ -187,17 +184,22 @@ const FLAVOUR_Q1: Record<string, string> = {
 const FLAVOUR_Q2 = "A dash of agave to balance it out.\n\nNow — you want something a bit more on the citrus side?";
 const FLAVOUR_Q3 = "Grapefruit or lime — do you lean one more over the other?";
 const FLAVOUR_Q4 = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
-const COCKTAIL_REVEAL_FALLBACK = "The Paloma Noir.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
+const FLAVOUR_Q2_FALLBACK = "Tell me more — are you after something crisp and sharp, or round and sweet?";
+const FLAVOUR_Q3_FALLBACK = "Any heat in there — chilli, spice — or something cleaner?";
+const FLAVOUR_Q4_FALLBACK = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
+const ROUNDUP_FALLBACK    = "Grapefruit.\n\nAgave.\n\nA trace of chilli.\n\nBitter at the back.\n\nI've got everything I need.";
+const COCKTAIL_REVEAL_FALLBACK = "The Velvet Alibi.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
 
 // ─── AI-driven steps ─────────────────────────────────────────────────────────
-const AI_STEPS = new Set([REVEAL_STEP]);
+const AI_STEPS = new Set([4, 5, 6, ROUNDUP_STEP, REVEAL_STEP]);
 
 function resolveAiText(stepIdx: number, selectedBottle: string | null, aiGeneratedSteps: Record<number, string>): string {
   if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
   if (stepIdx === 3) return FLAVOUR_Q1[selectedBottle ?? "reposado"] ?? FLAVOUR_Q1.reposado;
-  if (stepIdx === 4) return FLAVOUR_Q2;
-  if (stepIdx === 5) return FLAVOUR_Q3;
-  if (stepIdx === 6) return FLAVOUR_Q4;
+  if (stepIdx === 4) return FLAVOUR_Q2_FALLBACK;
+  if (stepIdx === 5) return FLAVOUR_Q3_FALLBACK;
+  if (stepIdx === 6) return FLAVOUR_Q4_FALLBACK;
+  if (stepIdx === ROUNDUP_STEP) return ROUNDUP_FALLBACK;
   if (stepIdx === REVEAL_STEP) return COCKTAIL_REVEAL_FALLBACK;
   return STEPS[stepIdx]?.aiText ?? "";
 }
@@ -336,7 +338,7 @@ function EmailInputField({ index, value, onChange }: { index: number; value: str
 }
 
 // ─── Cocktail video card ──────────────────────────────────────────────────────
-function CocktailCard({ onComplete }: { onComplete: () => void }) {
+function CocktailCard({ onComplete, src }: { onComplete: () => void; src: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const skip = () => { videoRef.current?.pause(); onComplete(); };
   return (
@@ -352,7 +354,7 @@ function CocktailCard({ onComplete }: { onComplete: () => void }) {
         playsInline
         controlsList="nodownload"
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", maxWidth: "none" }}
-        src={videoCocktail}
+        src={src}
         onEnded={onComplete}
       />
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 15%, transparent 78%, rgba(0,0,0,0.55) 100%)" }} />
@@ -512,7 +514,7 @@ export function PartyPlannerScreen() {
 
   const currentGalleryImages =
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
-    current.imgState === "keyword-reveal" ? COCKTAIL_GALLERY :
+    current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
@@ -600,7 +602,8 @@ export function PartyPlannerScreen() {
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
     setUserDisplay(""); setIsUserTyping(false);
-    setRevealedKeywords(new Set());
+    // Keep revealed keywords while we stay in the keyword-reveal void section
+    if (current.imgState !== "keyword-reveal") setRevealedKeywords(new Set());
     setInviteOpen(false);
     setPhase("thinking");
     // Flavour Q1 needs the bottle choice before text is known
@@ -611,7 +614,7 @@ export function PartyPlannerScreen() {
     return clearThink;
   }, [step, introActive, videoActive, nameActive, occasionActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When cocktail reveal text arrives, kick off typing
+  // When AI text arrives for an AI_STEPS step, kick off typing
   useEffect(() => {
     if (!AI_STEPS.has(step)) return;
     if (!aiGeneratedSteps[step]) return;
@@ -619,6 +622,20 @@ export function PartyPlannerScreen() {
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
     return clearThink;
   }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Safety net: if an AI step is stuck thinking for 7s, inject the fallback text
+  useEffect(() => {
+    if (!AI_STEPS.has(step)) return;
+    if (aiGeneratedSteps[step]) return;
+    if (phase !== "thinking") return;
+    const id = setTimeout(() => {
+      setAiGeneratedSteps(prev => {
+        if (prev[step]) return prev; // already arrived, skip
+        return { ...prev, [step]: resolveAiText(step, selectedBottle, {}) };
+      });
+    }, 7000);
+    return () => clearTimeout(id);
+  }, [step, phase, aiGeneratedSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When bottle is selected, kick off typing on step 3
   useEffect(() => {
@@ -731,22 +748,40 @@ export function PartyPlannerScreen() {
 
       if (FLAVOUR_STEPS.has(step)) {
         flavourAnswersRef.current[step - 3] = uText;
+        const bottle  = selectedBottleRef.current ?? "reposado";
+        const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
 
         if (step === 6) {
-          // Last flavour question — generate the cocktail reveal then advance
-          const bottle = selectedBottleRef.current ?? "reposado";
-          const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
-          const msgs: ConvMessage[] = [{
+          // Last flavour question — generate ingredient roundup + cocktail reveal in parallel
+          const roundupMsgs: ConvMessage[] = [{
+            role: "user",
+            content: `[System: The guest chose ${bottle}. Their flavour answers: ${answers}. List 4-5 key cocktail ingredients. Put each ingredient on its own line. Short, specific, one word or two. Then one punchy closing line (max 6 words). No cocktail name, no brand names. Stay in character as The Host — dry, cinematic.]`,
+          }];
+          const revealMsgs: ConvMessage[] = [{
             role: "user",
             content: `[System: The guest chose ${bottle}. Their flavour answers: ${answers}. Name their cocktail. First line: just the cocktail name. Then 2-3 short atmospheric lines. No product names or brand mentions. Stay in character as The Host — dry, cinematic.]`,
           }];
-          hostChat(msgs).then(raw => {
-            if (cancelled) return;
-            const text = raw || COCKTAIL_REVEAL_FALLBACK;
-            setAiGeneratedSteps(prev => ({ ...prev, [REVEAL_STEP]: text }));
-            setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+          Promise.all([hostChat(roundupMsgs), hostChat(revealMsgs)]).then(([roundup, reveal]) => {
+            // Always store AI text (never block on cancelled — these steps need text to proceed)
+            setAiGeneratedSteps(prev => ({
+              ...prev,
+              [ROUNDUP_STEP]: roundup || ROUNDUP_FALLBACK,
+              [REVEAL_STEP]:  reveal  || COCKTAIL_REVEAL_FALLBACK,
+            }));
+            if (!cancelled) setStep(prev => Math.min(prev + 1, STEPS.length - 1));
           });
         } else {
+          // Generate the next question in the background — avoids repeating what the user already said
+          const nextStep = step + 1;
+          const qMsgs: ConvMessage[] = [{
+            role: "user",
+            content: `[System: The guest chose ${bottle}. So far their flavour answers: ${answers}. Ask ONE short follow-up question about their drink preferences. Do NOT ask about or mention any flavours they already said. Explore a different angle: depth within a category, heat/spice, sweetness vs bitterness, drink length, or finish. Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
+          }];
+          const fallbacks: Record<number, string> = { 4: FLAVOUR_Q2_FALLBACK, 5: FLAVOUR_Q3_FALLBACK, 6: FLAVOUR_Q4_FALLBACK };
+          hostChat(qMsgs).then(text => {
+            // Always set — if empty use fallback; never leave an AI_STEPS step waiting forever
+            setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text?.trim() || fallbacks[nextStep] }));
+          });
           advanceTimerRef.current = setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 520);
         }
         return;
@@ -769,7 +804,10 @@ export function PartyPlannerScreen() {
   useEffect(() => {
     if (current.imgState !== "keyword-reveal") return;
     const defsToCheck = FLAVOUR_STEPS.has(step) || step === REVEAL_STEP ? COCKTAIL_DEFS : WESTERN_DEFS;
-    const combined = aiDisplay.toLowerCase() + " " + userDisplay.toLowerCase();
+    // Flavour Q steps: only reveal from user words. Roundup + reveal: AI text also triggers.
+    const combined = FLAVOUR_STEPS.has(step)
+      ? userDisplay.toLowerCase()
+      : aiDisplay.toLowerCase() + " " + userDisplay.toLowerCase();
     setRevealedKeywords((prev) => {
       let changed = false;
       const next = new Set(prev);
@@ -866,7 +904,7 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking     = phase === "thinking";
-  const isPaymentView  = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
+  const isPaymentView  = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail2";
   const isBottleSelect = current.view === "bottle-select";
 
   return (
@@ -940,10 +978,10 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
-      {/* ── Cocktail video reveal ─────────────────────────────────────────────────── */}
+      {/* ── Cocktail Vid 2 (post-flavour builder, pre-night reveal) ─────────────── */}
       <AnimatePresence>
-        {current.view === "cocktail" && (
-          <CocktailCard key="cocktail" onComplete={() => setStep(s => Math.min(s + 1, STEPS.length - 1))} />
+        {current.view === "cocktail2" && (
+          <CocktailCard key="cocktail2" src={videoCocktail2} onComplete={() => setStep(s => Math.min(s + 1, STEPS.length - 1))} />
         )}
       </AnimatePresence>
 
@@ -985,7 +1023,11 @@ export function PartyPlannerScreen() {
         {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
+            style={{ position: "absolute", left: "50%",
+              ...(current.imgState === "keyword-reveal" && revealedKeywords.size > 0
+                ? { top: 88, transform: "translateX(-50%)" }
+                : { top: "50%", transform: "translate(-50%, -50%)" }),
+              width: 300, textAlign: "center", zIndex: 20 }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontWeight: current.fontVariant === "semibold-italic" ? 600 : 400, fontStyle: current.fontVariant === "semibold-italic" ? "italic" : "normal", fontSize: 24, color: "white", lineHeight: 1.15, letterSpacing: current.fontVariant === "semibold-italic" ? -0.48 : 0, margin: 0, whiteSpace: "pre-wrap" }}>
               <BlurText text={aiDisplay} isTyping={isAiTyping} />

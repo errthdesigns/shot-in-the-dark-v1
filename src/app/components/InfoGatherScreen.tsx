@@ -601,10 +601,10 @@ const [dateIdx,  setDateIdx]  = useState<number | null>(null);
 
   const panel = PANELS[panelIdx];
 
-  // Speak question on panel entry
+  // Speak question on panel entry — 600ms delay gives screen transition time to settle
   useEffect(() => {
     stopSpeech();
-    const id = setTimeout(() => speakText(VOICE_LINES[panel]), 120);
+    const id = setTimeout(() => speakText(VOICE_LINES[panel]), 600);
     return () => { clearTimeout(id); };
   }, [panelIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 

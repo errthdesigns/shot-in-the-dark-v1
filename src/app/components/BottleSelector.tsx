@@ -1,10 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { speakText, stopSpeech } from "../services/elevenlabs";
 import { motion, AnimatePresence } from "motion/react";
 import imgCristalino from "../../assets/don cristalino.png";
 import imgReposado   from "../../assets/don 1.png";
 import imgBlanco     from "../../assets/don blanco.png";
 
 const SELECTABLE_ID = "reposado";
+
+const BOTTLE_LINES: Record<string, string> = {
+  cristalino: "Cristalino. Triple filtered, crystal clear. The one you pour when you want the room to notice.",
+  reposado:   "Reposado. Aged in oak. Golden, a little smoky, smooth finish. This is the one.",
+  blanco:     "Blanco. Raw, bold, nothing to hide. Pure Don Julio — no apology.",
+};
 
 export interface BottleData {
   id: string;
@@ -33,6 +40,13 @@ export function BottleSelector({ onSelect }: Props) {
   const [breaking, setBreaking]       = useState(false);
   const scrollRef                     = useRef<HTMLDivElement>(null);
   const pointerDownScrollX            = useRef(0);
+
+  // Speak bottle description whenever the active page changes
+  useEffect(() => {
+    stopSpeech();
+    const id = setTimeout(() => speakText(BOTTLE_LINES[BOTTLES[activePage].id]), 400);
+    return () => clearTimeout(id);
+  }, [activePage]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -121,18 +135,25 @@ export function BottleSelector({ onSelect }: Props) {
         })}
       </div>
 
-      {/* ── Page dots ── */}
+      {/* ── Page dots + swipe hint ── */}
       <div style={{
         position: "absolute", bottom: 72, left: 0, right: 0,
-        display: "flex", justifyContent: "center", gap: 8, pointerEvents: "none",
+        display: "flex", justifyContent: "center", alignItems: "center", gap: 12, pointerEvents: "none",
       }}>
-        {BOTTLES.map((_, i) => (
-          <div key={i} style={{
-            width: i === activePage ? 18 : 6, height: 6, borderRadius: 3,
-            backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
-            transition: "all 0.25s ease",
-          }} />
-        ))}
+        <motion.p
+          animate={{ opacity: activePage === 0 ? 0.38 : 0 }}
+          transition={{ duration: 0.4 }}
+          style={{ fontFamily: "Inter, sans-serif", fontSize: 9, color: "white", letterSpacing: 2.5, textTransform: "uppercase", margin: 0 }}
+        >swipe</motion.p>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {BOTTLES.map((_, i) => (
+            <div key={i} style={{
+              width: i === activePage ? 18 : 6, height: 6, borderRadius: 3,
+              backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
+              transition: "all 0.25s ease",
+            }} />
+          ))}
+        </div>
       </div>
 
       {/* ── Break flash — white flare on select ── */}

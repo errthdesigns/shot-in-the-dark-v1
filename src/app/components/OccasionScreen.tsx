@@ -8,27 +8,29 @@ import svgMicPaths from "../../imports/svg-p5gailxsrc";
 // ── System prompt — reaction sentences only ───────────────────────────────────
 const REACT_SYSTEM = `You are The Host. Dry. Specific. Confident.
 Reply with ONE sentence only — max 12 words. No questions. No filler.
-React to what the guest just told you. Make it feel inevitable.
-Example: "A birthday. Good. Someone always takes that personally by the end of the night."`;
+Do NOT repeat or paraphrase what the guest said. Instead, react to the vibe — make an intriguing, dry observation about what that kind of night means.
+Example: "A birthday. Good. Someone always takes that personally by the end of the night."
+Example: "The heiress energy. It suits this crowd."`;
 
 // ── Hardcoded beat scripts ────────────────────────────────────────────────────
 const BEAT_1 = "What kind of night did you have in mind?\n\nA birthday, an excuse for some great tequila, or you just have a killer outfit that needs a showtime...";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function getReaction(userText: string): Promise<string> {
-  const msgs: ConvMessage[] = [{ role: "user", content: `Guest said: "${userText}". React in ONE dry sentence, max 12 words. Reference what they actually said. No questions.` }];
+  const msgs: ConvMessage[] = [{ role: "user", content: `Guest said: "${userText}". React in ONE dry sentence, max 12 words. Do NOT repeat their words. React to the vibe — make it feel inevitable. No questions.` }];
   const raw = (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim();
   if (raw) return raw;
 
-  // Fallback — always reference what they said
+  // Fallback — never echo the user's words back
   const lower = userText.toLowerCase();
-  if (/30th|thirtieth/.test(lower))       return "A 30th. Good. Milestones always bring something out in people.";
-  if (/birthday|bday/.test(lower))        return "A birthday. Good. Someone always takes that personally by the end of the night.";
-  if (/leaving|quit|resignation/.test(lower)) return "Leaving a job. There's always at least one person who cries.";
-  if (/anniversary/.test(lower))          return "An anniversary. Good. The ones who've lasted always have something to prove.";
-  if (/celebration|celebrate/.test(lower)) return "A celebration. Good. The best nights always start with an excuse.";
-  if (/casual|chill|hangout/.test(lower)) return "A casual night. Sure. Those are the ones that go sideways.";
-  return `${userText.charAt(0).toUpperCase() + userText.slice(0, 30)}. Good. I can work with that.`;
+  if (/30th|thirtieth/.test(lower))            return "Milestones always bring something out in people.";
+  if (/birthday|bday/.test(lower))             return "Someone always takes that personally by the end of the night.";
+  if (/leaving|quit|resignation/.test(lower))  return "There's always at least one person who cries.";
+  if (/anniversary/.test(lower))               return "The ones who've lasted always have something to prove.";
+  if (/celebration|celebrate/.test(lower))     return "The best nights always start with an excuse.";
+  if (/casual|chill|hangout/.test(lower))      return "Those are the ones that go sideways.";
+  if (/dress|outfit|wear/.test(lower))         return "Oh... the heiress energy. It suits tonight.";
+  return "Good. I can work with that.";
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -93,7 +95,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; stopSpeech(); };
+    return () => { mountedRef.current = false; };
   }, []);
 
   // ── Mount: show Beat 1 immediately — no API call ──────────────────────────

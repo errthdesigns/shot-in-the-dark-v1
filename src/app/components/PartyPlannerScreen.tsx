@@ -152,10 +152,10 @@ interface Step {
 const STEPS: Step[] = [
   // 0 — tone intro (auto-advance after voice)
   { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 1 — pick your poison (auto-advance after voice)
-  { aiText: "Pick your poison, and I'll match the story to the spirit.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 1 — bottle framing line (auto-advance after voice)
+  { aiText: "The bottle doesn't just set the mood.\n\nIt decides who you are tonight.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 2 — bottle selector (3-drink carousel; user taps a bottle to advance)
-  { aiText: "Whichever bottle you pick will set the theme of the night — choose wisely.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
   // 3 — dynamic bottle response (speechAdvance; western gallery bg for reposado)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 4 — cart
@@ -168,9 +168,9 @@ const STEPS: Step[] = [
 const BOTTLE_RESPONSE_STEP = 3;
 
 const BOTTLE_RESPONSES: Record<string, string> = {
-  cristalino: "Cristalino.\n\nIce-cold clarity. Smooth edges. No rough ends.\n\nThe night is clean. Precise. Dangerous in its own way.",
-  reposado:   "Reposado.\n\nSmoke, leather, and a debt someone left unpaid.\n\nDon your hat.\n\nLace up your boots.\n\nHead to the saloon.\n\nThis is a Western Noir night.",
-  blanco:     "Blanco.\n\nBold and pure. The agave speaks for itself.\n\nNothing to hide. Everything to prove.\n\nThis is a night with no alibi.",
+  cristalino: "Ice cold.\n\nSmooth edges. No rough ends.\n\nEveryone arrives dressed like they have nothing to hide.\n\nOnly one of them is telling the truth.",
+  reposado:   "Smoke and leather.\n\nA debt someone left unpaid.\n\nDon your hat.\n\nLace up your boots.\n\nHead to the saloon.\n\nThis is a Western Noir.",
+  blanco:     "Pure. No apology.\n\nThe kind of night that starts clean and ends in confession.\n\nThis is a night with no alibi.",
 };
 
 function resolveAiText(stepIdx: number, selectedBottle: string | null): string {

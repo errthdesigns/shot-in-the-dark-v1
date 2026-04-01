@@ -13,9 +13,9 @@ export interface BottleData {
 }
 
 export const BOTTLES: BottleData[] = [
-  { id: "cristalino", name: "Cristalino",  mood: "Ice Cold"       },
-  { id: "reposado",   name: "Reposado",    mood: "Smoke & Leather" },
-  { id: "blanco",     name: "Blanco",      mood: "No Alibi"       },
+  { id: "cristalino", name: "Cristalino",  mood: "1920's Masquerade" },
+  { id: "reposado",   name: "Reposado",    mood: "Western Noir"      },
+  { id: "blanco",     name: "Blanco",      mood: "White Lotus"       },
 ];
 
 const IMG_MAP: Record<string, string> = {

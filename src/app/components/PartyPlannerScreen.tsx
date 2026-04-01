@@ -51,7 +51,10 @@ import imgCocktailMint       from "../../assets/Cocktail/Mint.jpg";
 import imgCocktailSour       from "../../assets/Cocktail/Sour Cocktail.jpg";
 import imgCocktailSweet      from "../../assets/Cocktail/Sweet Cocktail.jpg";
 
-// ── Final reveal: orange video frame ─────────────────────────────────────────
+// ── Final reveal: cocktail video ─────────────────────────────────────────────
+import videoCocktail from "../../assets/Untitled (71).mp4";
+import { OccasionScreen } from "./OccasionScreen";
+import { hostChat, ConvMessage } from "../services/claude";
 
 // ── Gatsby theme images ───────────────────────────────────────────────────────
 import imgGatsbyA from "figma:asset/33c1904697d60857f2793985dd45af0b65d00138.png";
@@ -131,6 +134,7 @@ const COCKTAIL_DEFS: IngredientDef[] = [
   { keyword: "bitter",     src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
   { keyword: "smok",       src: imgDrinkC,                x:0, y:0, w:175, h:145, radius:14, rotZ:-5.1, cx: -120, cy:  -60 },
   { keyword: "dark",       src: imgCocktailBitter,        x:0, y:0, w:165, h:145, radius:14, rotZ: 2.5, cx:  -10, cy:  140 },
+  { keyword: "agave",      src: imgPalomaAgave,           x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -150,31 +154,51 @@ interface Step {
 
 // ─── Conversation script ──────────────────────────────────────────────────────
 const STEPS: Step[] = [
-  // 0 — tone intro (auto-advance after voice)
-  { aiText: "Every great mystery has a tone. A temperature.\n\nAnd around here, that starts with what's in the glass.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 1 — bottle framing line (auto-advance after voice)
+  // 0 — fun intro (speechAdvance)
+  { aiText: "Now, the fun part.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
+  // 1 — bottle framing (speechAdvance)
   { aiText: "The bottle doesn't just set the mood.\n\nIt decides who you are tonight.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 2 — bottle selector (3-drink carousel; user taps a bottle to advance)
+  // 2 — bottle selector (3-drink carousel)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 3 — dynamic bottle response (speechAdvance; western gallery bg for reposado)
+  // 3-6 — flavour questions (chat, keyword-reveal void, user responds each turn)
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
+  // 7 — cocktail reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 4 — cart
+  // 8 — cocktail video
+  { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail", noVoice: true },
+  // 9 — cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 5 — apple pay
+  // 10 — apple pay
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
-// ─── Bottle-selection dynamic text ───────────────────────────────────────────
-const BOTTLE_RESPONSE_STEP = 3;
+// ─── Flavour conversation ─────────────────────────────────────────────────────
+const FLAVOUR_STEPS = new Set([3, 4, 5, 6]);
+const REVEAL_STEP   = 7;
 
-const BOTTLE_RESPONSES: Record<string, string> = {
-  cristalino: "Ice cold.\n\nSmooth edges. No rough ends.\n\nEveryone arrives dressed like they have nothing to hide.\n\nOnly one of them is telling the truth.",
-  reposado:   "Smoke and leather.\n\nA debt someone left unpaid.\n\nDon your hat.\n\nLace up your boots.\n\nHead to the saloon.\n\nThis is a Western Noir.",
-  blanco:     "Pure. No apology.\n\nThe kind of night that starts clean and ends in confession.\n\nThis is a night with no alibi.",
+const FLAVOUR_Q1: Record<string, string> = {
+  reposado:   "Solid choice.\n\nThe Reposado — golden, a little smoky, smooth finish.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
+  cristalino: "Cristalino.\n\nIce-cold clarity, smooth as glass.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
+  blanco:     "Blanco.\n\nBold, pure, no apology.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
 };
+const FLAVOUR_Q2 = "A dash of agave to balance it out.\n\nNow — you want something a bit more on the citrus side?";
+const FLAVOUR_Q3 = "Grapefruit or lime — do you lean one more over the other?";
+const FLAVOUR_Q4 = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
+const COCKTAIL_REVEAL_FALLBACK = "The Paloma Noir.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
 
-function resolveAiText(stepIdx: number, selectedBottle: string | null): string {
-  if (stepIdx === BOTTLE_RESPONSE_STEP && selectedBottle) return BOTTLE_RESPONSES[selectedBottle] ?? BOTTLE_RESPONSES.reposado;
+// ─── AI-driven steps ─────────────────────────────────────────────────────────
+const AI_STEPS = new Set([REVEAL_STEP]);
+
+function resolveAiText(stepIdx: number, selectedBottle: string | null, aiGeneratedSteps: Record<number, string>): string {
+  if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
+  if (stepIdx === 3) return FLAVOUR_Q1[selectedBottle ?? "reposado"] ?? FLAVOUR_Q1.reposado;
+  if (stepIdx === 4) return FLAVOUR_Q2;
+  if (stepIdx === 5) return FLAVOUR_Q3;
+  if (stepIdx === 6) return FLAVOUR_Q4;
+  if (stepIdx === REVEAL_STEP) return COCKTAIL_REVEAL_FALLBACK;
   return STEPS[stepIdx]?.aiText ?? "";
 }
 
@@ -440,9 +464,13 @@ export function PartyPlannerScreen() {
   // Name entry after video
   const [nameActive, setNameActive]     = useState(false);
   const [playerName, setPlayerName]     = useState("");
-  // Info-gather tap UI — shown after name entry, before main flow
+  // Occasion chat — shown after name entry, before info-gather
+  const [occasionActive, setOccasionActive] = useState(false);
+  // Info-gather tap UI — shown after occasion, before main flow
   const [infoGatherActive, setInfoGatherActive] = useState(false);
   const [partyDetails, setPartyDetails] = useState<PartyDetails | null>(null);
+  // AI-generated step text (e.g. cocktail reveal)
+  const [aiGeneratedSteps, setAiGeneratedSteps] = useState<Record<number, string>>({});
   // Tap-to-start gate — must tap once to unlock AudioContext before intro voice plays
   const [tapToStart, setTapToStart]     = useState(true);
   const [inviteOpen, setInviteOpen]     = useState(false);
@@ -457,8 +485,12 @@ export function PartyPlannerScreen() {
   const thinkTimerRef         = useRef<ReturnType<typeof setTimeout> | null>(null);
   const advanceTimerRef       = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Voice capture refs
-  const recognitionRef     = useRef<any>(null);
-  const voiceTranscriptRef = useRef<string>("");
+  const recognitionRef        = useRef<any>(null);
+  const voiceTranscriptRef    = useRef<string>("");
+  // Flavour answers collector
+  const flavourAnswersRef     = useRef<string[]>([]);
+  // Mirror of selectedBottle for use in closures
+  const selectedBottleRef     = useRef<string | null>(null);
 
   const clearType    = () => { if (typeTimerRef.current)    clearTimeout(typeTimerRef.current); };
   const clearThink   = () => { if (thinkTimerRef.current)   clearTimeout(thinkTimerRef.current); };
@@ -479,9 +511,8 @@ export function PartyPlannerScreen() {
   ];
 
   const currentGalleryImages =
-    current.imgState === "gatsby-reveal"                                       ? GATSBY_COMBINED :
-    current.imgState === "keyword-reveal" && step === BOTTLE_RESPONSE_STEP     ? WESTERN_GALLERY :
-    current.imgState === "keyword-reveal"                                       ? COCKTAIL_GALLERY :
+    current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
+    current.imgState === "keyword-reveal" ? COCKTAIL_GALLERY :
     PARTY_IMAGES;
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
@@ -501,9 +532,8 @@ export function PartyPlannerScreen() {
     tileSlots.push({ id: "date", x:  92,  y: 145, rotZ: 4, w: 86, h: 102, children: <DateTileContent /> });
   }
   // ── Keyword TileSlots — fly through the 3D void exactly like gallery cards ──
-  // Step 0 (cocktail builder) → COCKTAIL_DEFS; step 1 (reveal) → WESTERN_DEFS
   if (current.imgState === "keyword-reveal") {
-    const activeDefs = step === 1 ? WESTERN_DEFS : COCKTAIL_DEFS;
+    const activeDefs = COCKTAIL_DEFS;
     activeDefs.forEach((def) => {
       if (!revealedKeywords.has(def.keyword)) return;
       tileSlots.push({
@@ -565,7 +595,7 @@ export function PartyPlannerScreen() {
 
   // ── Effect 1: step change → reset and start thinking ───────────────────────
   useEffect(() => {
-    if (introActive || videoActive || nameActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || occasionActive || infoGatherActive) return;
     clearAll();
     stopSpeech();
     setAiDisplay(""); setIsAiTyping(false);
@@ -573,25 +603,39 @@ export function PartyPlannerScreen() {
     setRevealedKeywords(new Set());
     setInviteOpen(false);
     setPhase("thinking");
-    // Bottle response step needs selectedBottle before it can type — wait if not set yet
-    if (step === BOTTLE_RESPONSE_STEP && !selectedBottle) return;
-    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 850);
+    // Flavour Q1 needs the bottle choice before text is known
+    if (step === 3 && !selectedBottle) return;
+    // AI-generated steps wait until content arrives
+    if (AI_STEPS.has(step) && !aiGeneratedSteps[step]) return;
+    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), step <= 2 ? 850 : 500);
     return clearThink;
-  }, [step, introActive, videoActive, nameActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [step, introActive, videoActive, nameActive, occasionActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When bottle is selected, kick off typing on the bottle response step
+  // When cocktail reveal text arrives, kick off typing
   useEffect(() => {
-    if (step !== BOTTLE_RESPONSE_STEP || !selectedBottle) return;
+    if (!AI_STEPS.has(step)) return;
+    if (!aiGeneratedSteps[step]) return;
+    if (phase !== "thinking") return;
+    thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
+    return clearThink;
+  }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When bottle is selected, kick off typing on step 3
+  useEffect(() => {
+    if (step !== 3 || !selectedBottle) return;
     if (phase !== "thinking") return;
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
     return clearThink;
   }, [selectedBottle, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Sync selectedBottle into a ref for use in closures
+  useEffect(() => { selectedBottleRef.current = selectedBottle; }, [selectedBottle]);
+
   // ── Effect 2: stream AI text, then ready / autoAdvance / speechAdvance ──────
   useEffect(() => {
-    if (introActive || videoActive || nameActive || infoGatherActive) return;
+    if (introActive || videoActive || nameActive || occasionActive || infoGatherActive) return;
     if (phase !== "ai_typing") return;
-    const text  = resolveAiText(step, selectedBottle);
+    const text  = resolveAiText(step, selectedBottle, aiGeneratedSteps);
     const s     = STEPS[step];
     const myStep = step;
     let i = 0;
@@ -684,6 +728,30 @@ export function PartyPlannerScreen() {
     // After the user text finishes typing, decide what happens next
     const afterType = () => {
       setIsUserTyping(false);
+
+      if (FLAVOUR_STEPS.has(step)) {
+        flavourAnswersRef.current[step - 3] = uText;
+
+        if (step === 6) {
+          // Last flavour question — generate the cocktail reveal then advance
+          const bottle = selectedBottleRef.current ?? "reposado";
+          const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
+          const msgs: ConvMessage[] = [{
+            role: "user",
+            content: `[System: The guest chose ${bottle}. Their flavour answers: ${answers}. Name their cocktail. First line: just the cocktail name. Then 2-3 short atmospheric lines. No product names or brand mentions. Stay in character as The Host — dry, cinematic.]`,
+          }];
+          hostChat(msgs).then(raw => {
+            if (cancelled) return;
+            const text = raw || COCKTAIL_REVEAL_FALLBACK;
+            setAiGeneratedSteps(prev => ({ ...prev, [REVEAL_STEP]: text }));
+            setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+          });
+        } else {
+          advanceTimerRef.current = setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 520);
+        }
+        return;
+      }
+
       advanceTimerRef.current = setTimeout(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 520);
     };
 
@@ -697,10 +765,10 @@ export function PartyPlannerScreen() {
     return () => { cancelled = true; clearType(); clearAdvance(); };
   }, [phase, step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Effect 5: keyword-triggered image reveal (bottle response step → western) ─
+  // ── Effect 5: keyword-triggered image reveal ──────────────────────────────
   useEffect(() => {
     if (current.imgState !== "keyword-reveal") return;
-    const defsToCheck = step === BOTTLE_RESPONSE_STEP ? WESTERN_DEFS : COCKTAIL_DEFS;
+    const defsToCheck = FLAVOUR_STEPS.has(step) || step === REVEAL_STEP ? COCKTAIL_DEFS : WESTERN_DEFS;
     const combined = aiDisplay.toLowerCase() + " " + userDisplay.toLowerCase();
     setRevealedKeywords((prev) => {
       let changed = false;
@@ -798,7 +866,7 @@ export function PartyPlannerScreen() {
   };
 
   const isThinking     = phase === "thinking";
-  const isPaymentView  = current.view === "cart" || current.view === "apple-pay";
+  const isPaymentView  = current.view === "cart" || current.view === "apple-pay" || current.view === "cocktail";
   const isBottleSelect = current.view === "bottle-select";
 
   return (
@@ -872,6 +940,13 @@ export function PartyPlannerScreen() {
         )}
       </AnimatePresence>
 
+      {/* ── Cocktail video reveal ─────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {current.view === "cocktail" && (
+          <CocktailCard key="cocktail" onComplete={() => setStep(s => Math.min(s + 1, STEPS.length - 1))} />
+        )}
+      </AnimatePresence>
+
       {/* ── Cart screen ──────────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {current.view === "cart" && (
@@ -907,7 +982,7 @@ export function PartyPlannerScreen() {
 
       {/* ── AI text (hidden on bottle-select and all overlay screens) ────────── */}
       <AnimatePresence mode="wait">
-        {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !infoGatherActive && (
+        {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
@@ -921,7 +996,7 @@ export function PartyPlannerScreen() {
 
       {/* ── User text bubble (live transcript while recording, then typed result) */}
       <AnimatePresence>
-        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !infoGatherActive && (
+        {(userDisplay || liveTranscript) && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div
             key="user-bubble"
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
@@ -936,7 +1011,7 @@ export function PartyPlannerScreen() {
       </AnimatePresence>
 
       {/* ── Step indicator pills — sit above the control bar ─────────────────── */}
-      {!introActive && !videoActive && !nameActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
+      {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
         <div style={{ position: "absolute", bottom: 84, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 4 }}>
           {STEPS.map((_, i) => (
             <motion.div key={i}
@@ -949,7 +1024,7 @@ export function PartyPlannerScreen() {
       )}
 
       {/* ── Bottom control bar ───────────────────────────────────────────────── */}
-      {!introActive && !videoActive && !nameActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
+      {!introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && !isPaymentView && !isBottleSelect && (
         <div
           style={{ position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: 18, zIndex: 50 }}
           onClick={(e) => e.stopPropagation()}
@@ -1103,8 +1178,30 @@ export function PartyPlannerScreen() {
             <NameScreen onComplete={(name) => {
               setPlayerName(name);
               setNameActive(false);
-              setInfoGatherActive(true);
+              setOccasionActive(true);
             }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Occasion chat — shown after name entry ──────────────────────────────── */}
+      <AnimatePresence>
+        {occasionActive && !nameActive && (
+          <motion.div
+            key="occasion-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7, ease: "easeInOut" }}
+            style={{ position: "absolute", inset: 0, zIndex: 170, borderRadius: 21 }}
+          >
+            <OccasionScreen
+              playerName={playerName}
+              onComplete={() => {
+                setOccasionActive(false);
+                setInfoGatherActive(true);
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

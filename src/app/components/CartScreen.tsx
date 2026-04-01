@@ -45,10 +45,11 @@ const PRICE_LABEL: React.CSSProperties = {
   flexShrink: 0,
 };
 
-function ImgRow({ src, imgStyle, label, price }: {
+function ImgRow({ src, imgStyle, label, qty, price }: {
   src: string;
   imgStyle?: React.CSSProperties;
   label: string;
+  qty: string;
   price: string;
 }) {
   return (
@@ -56,7 +57,7 @@ function ImgRow({ src, imgStyle, label, price }: {
       <div style={{ flexShrink: 0, width: 58, height: 58, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <img alt="" src={src} style={{ width: 58, height: 58, objectFit: "cover", display: "block", ...imgStyle }} />
       </div>
-      <p style={ITEM_LABEL}>{label}</p>
+      <p style={ITEM_LABEL}>{label} <span style={{ fontSize: 13, color: "#aaa", fontStyle: "normal" }}>{qty}</span></p>
       <p style={PRICE_LABEL}>{price}</p>
     </div>
   );
@@ -117,28 +118,32 @@ export function CartScreen({ onApplePay, guests = 6 }: CartScreenProps) {
         {/* Fresh Grapefruit (guests×) */}
         <ImgRow
           src={imgGrapefruit}
-          label={`Fresh Grapefruit ×${gfQty}`}
+          label="Fresh Grapefruit"
+          qty={`×${gfQty}`}
           price={`$${(P_GRAPEFRUIT * gfQty).toFixed(2)}`}
         />
 
         {/* Fresh Lime (guests×) */}
         <ImgRow
           src={imgLime}
-          label={`Fresh Lime ×${limeQty}`}
+          label="Fresh Lime"
+          qty={`×${limeQty}`}
           price={`$${(P_LIME * limeQty).toFixed(2)}`}
         />
 
         {/* Agave Nectar (1×) */}
         <ImgRow
           src={imgAgave}
-          label="Agave Nectar ×1"
+          label="Agave Nectar"
+          qty="×1"
           price={`$${P_AGAVE.toFixed(2)}`}
         />
 
         {/* Fresh Cilantro (1×) */}
         <ImgRow
           src={imgCilantro}
-          label="Fresh Cilantro ×1"
+          label="Fresh Cilantro"
+          qty="×1"
           price={`$${P_CILANTRO.toFixed(2)}`}
         />
 

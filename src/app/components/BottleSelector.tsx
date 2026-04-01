@@ -165,7 +165,7 @@ export function BottleSelector({ onSelect }: Props) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45, ease: "easeIn" }}
-            style={{ position: "absolute", inset: 0, backgroundColor: "white", pointerEvents: "none", zIndex: 100 }}
+            style={{ position: "absolute", inset: 0, backgroundColor: "black", pointerEvents: "none", zIndex: 100 }}
           />
         )}
       </AnimatePresence>

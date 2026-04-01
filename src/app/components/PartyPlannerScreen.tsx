@@ -125,7 +125,8 @@ const COCKTAIL_DEFS: IngredientDef[] = [
   { keyword: "spic",       src: imgCocktailChilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
   { keyword: "honey",      src: imgCocktailHoney,      x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
   { keyword: "mint",       src: imgCocktailMint,       x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
-  { keyword: "sweet",      src: imgCocktailSweet,      x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
+  { keyword: "citru",      src: imgCocktailGrapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ: 2.7, cx:   75, cy:  -35 },
+  { keyword: "sweet",      src: imgCocktailHoney,      x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
   { keyword: "sour",       src: imgCocktailSour,       x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
   { keyword: "bitter",     src: imgCocktailBitter,     x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
   { keyword: "agave",      src: imgPalomaAgave,        x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
@@ -775,7 +776,7 @@ export function PartyPlannerScreen() {
           const nextStep = step + 1;
           const qMsgs: ConvMessage[] = [{
             role: "user",
-            content: `[System: The guest chose ${bottle}. So far their flavour answers: ${answers}. Ask ONE short follow-up question about their drink preferences. Do NOT ask about or mention any flavours they already said. Explore a different angle: depth within a category, heat/spice, sweetness vs bitterness, drink length, or finish. Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
+            content: `[System: The guest chose ${bottle}. Their flavour answers so far: "${answers}". Ask ONE short follow-up question about their drink preferences. STRICT RULES: (1) Do NOT mention or echo any word or concept from their answers — if they said citrus, do not ask about citrus; if they said sweet, do not ask about sweet. (2) Explore a completely new angle not yet covered: heat/spice, bitterness, drink length, or finish. (3) Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
           }];
           const fallbacks: Record<number, string> = { 4: FLAVOUR_Q2_FALLBACK, 5: FLAVOUR_Q3_FALLBACK, 6: FLAVOUR_Q4_FALLBACK };
           hostChat(qMsgs).then(text => {

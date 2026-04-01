@@ -40,16 +40,14 @@ import imgPalomaAgave      from "../../assets/Agave.png";
 import imgPalomaCilantro   from "../../assets/Cilantro.png";
 import imgPalomaClubSoda   from "../../assets/soda.png";
 
-// ── Cocktail builder ingredient images (keyword-spawn during cocktail chat) ───
-import imgCocktailBitter     from "../../assets/Cocktail/Bitter Cocktail.jpg";
-import imgCocktailChilli     from "../../assets/Cocktail/Chilli.jpg";
-import imgCocktailGrapefruit from "../../assets/Cocktail/Grapefruit.jpg";
-import imgCocktailHoney      from "../../assets/Cocktail/Honey.jpg";
-import imgCocktailLemon      from "../../assets/Cocktail/Lemon.jpg";
-import imgCocktailLime       from "../../assets/Cocktail/Lime.jpg";
-import imgCocktailMint       from "../../assets/Cocktail/Mint.jpg";
-import imgCocktailSour       from "../../assets/Cocktail/Sour Cocktail.jpg";
-import imgCocktailSweet      from "../../assets/Cocktail/Sweet Cocktail.jpg";
+// ── Cocktail 2 — keyword-spawn ingredient images (flavour builder void) ─────
+import imgC2Citrus1    from "../../assets/Cocktail 2/citrus 1.jpg";
+import imgC2Citrus2    from "../../assets/Cocktail 2/citrus 2.jpg";
+import imgC2Sweet1     from "../../assets/Cocktail 2/Sweet 1.jpg";
+import imgC2Sweet2     from "../../assets/Cocktail 2/sweet 2.jpg";
+import imgC2Chilli     from "../../assets/Cocktail 2/Chilli.jpg";
+import imgC2Grapefruit from "../../assets/Cocktail 2/Grapefruit.jpg";
+import imgC2SlowSip    from "../../assets/Cocktail 2/slow sip 1.jpg";
 
 // ── Final reveal: cocktail video ─────────────────────────────────────────────
 import videoCocktail2 from "../../assets/Cocktail Vid 2.mp4";
@@ -116,20 +114,19 @@ const WESTERN_DEFS: IngredientDef[] = [
   { keyword: "grapefruit", src: imgNightGrapefruit,    x: 0, y: 0, w: 130, h: 130, radius: 65, rotZ:  7.3, cx:  145, cy:  -80 },
 ];
 
-// ── Cocktail keyword-spawn defs — images fly in as user/LLM mentions flavours ─
-// keywords matched against aiDisplay + userDisplay combined (case-insensitive)
+// ── Cocktail keyword-spawn defs — images fly in as user mentions flavours ─────
+// During flavour steps (3-6): matched against userDisplay only.
+// During roundup (7) + reveal (9): matched against aiDisplay + userDisplay.
 const COCKTAIL_DEFS: IngredientDef[] = [
-  { keyword: "lemon",      src: imgCocktailLemon,      x:0, y:0, w:148, h:148, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
-  { keyword: "grapefruit", src: imgCocktailGrapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ:-5.9, cx: -135, cy:  -95 },
-  { keyword: "lime",       src: imgCocktailLime,       x:0, y:0, w:142, h:142, radius:14, rotZ: 4.1, cx:   60, cy:  170 },
-  { keyword: "spic",       src: imgCocktailChilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
-  { keyword: "honey",      src: imgCocktailHoney,      x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
-  { keyword: "mint",       src: imgCocktailMint,       x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
-  { keyword: "citru",      src: imgCocktailGrapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ: 2.7, cx:   75, cy:  -35 },
-  { keyword: "sweet",      src: imgCocktailHoney,      x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
-  { keyword: "sour",       src: imgCocktailSour,       x:0, y:0, w:155, h:150, radius:14, rotZ: 6.8, cx:  -50, cy: -145 },
-  { keyword: "bitter",     src: imgCocktailBitter,     x:0, y:0, w:165, h:145, radius:14, rotZ:-2.8, cx:  130, cy:   50 },
-  { keyword: "agave",      src: imgPalomaAgave,        x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
+  { keyword: "citru",    src: imgC2Citrus1,    x:0, y:0, w:150, h:150, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
+  { keyword: "citrus",   src: imgC2Citrus2,    x:0, y:0, w:150, h:150, radius:14, rotZ: 2.7, cx:   75, cy:  -35 },
+  { keyword: "sweet",    src: imgC2Sweet1,     x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
+  { keyword: "sugar",    src: imgC2Sweet2,     x:0, y:0, w:155, h:150, radius:14, rotZ:-4.1, cx:  -80, cy:  145 },
+  { keyword: "chilli",   src: imgC2Chilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
+  { keyword: "spic",     src: imgC2Chilli,     x:0, y:0, w:130, h:158, radius:14, rotZ: 3.5, cx: -140, cy:  -50 },
+  { keyword: "grapefru", src: imgC2Grapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ:-5.9, cx: -135, cy:  -95 },
+  { keyword: "slow",     src: imgC2SlowSip,    x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
+  { keyword: "sip",      src: imgC2SlowSip,    x:0, y:0, w:155, h:155, radius:14, rotZ:-2.2, cx:  110, cy:  160 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -185,9 +182,9 @@ const FLAVOUR_Q1: Record<string, string> = {
 const FLAVOUR_Q2 = "A dash of agave to balance it out.\n\nNow — you want something a bit more on the citrus side?";
 const FLAVOUR_Q3 = "Grapefruit or lime — do you lean one more over the other?";
 const FLAVOUR_Q4 = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
-const FLAVOUR_Q2_FALLBACK = "Tell me more — are you after something crisp and sharp, or round and sweet?";
-const FLAVOUR_Q3_FALLBACK = "Any heat in there — chilli, spice — or something cleaner?";
-const FLAVOUR_Q4_FALLBACK = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
+const FLAVOUR_Q2_FALLBACK = "Any heat in there — chilli, spice — or something cleaner?";
+const FLAVOUR_Q3_FALLBACK = "Something long and slow to sip, or short and sharp?";
+const FLAVOUR_Q4_FALLBACK = "Last one.\n\nRich and smooth, or clean and dry?";
 const ROUNDUP_FALLBACK    = "Grapefruit.\n\nAgave.\n\nA trace of chilli.\n\nBitter at the back.\n\nI've got everything I need.";
 const COCKTAIL_REVEAL_FALLBACK = "The Velvet Alibi.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
 
@@ -508,9 +505,8 @@ export function PartyPlannerScreen() {
     current.imgState === "keyword-reveal";
 
   const COCKTAIL_GALLERY = [
-    imgCocktailBitter, imgCocktailChilli, imgCocktailGrapefruit, imgCocktailHoney,
-    imgCocktailLemon,  imgCocktailLime,   imgCocktailMint,        imgCocktailSour,
-    imgCocktailSweet,  imgIngredientStrawberry, imgDrinkA,
+    imgC2Citrus1, imgC2Citrus2, imgC2Sweet1, imgC2Sweet2,
+    imgC2Chilli,  imgC2Grapefruit, imgC2SlowSip,
   ];
 
   const currentGalleryImages =

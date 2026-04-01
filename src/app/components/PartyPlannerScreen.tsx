@@ -121,12 +121,10 @@ const COCKTAIL_DEFS: IngredientDef[] = [
   { keyword: "citru",    src: imgC2Citrus1,    x:0, y:0, w:150, h:150, radius:14, rotZ:-3.1, cx:  -30, cy: -175 },
   { keyword: "citrus",   src: imgC2Citrus2,    x:0, y:0, w:150, h:150, radius:14, rotZ: 2.7, cx:   75, cy:  -35 },
   { keyword: "sweet",    src: imgC2Sweet1,     x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
-  { keyword: "sugar",    src: imgC2Sweet2,     x:0, y:0, w:155, h:150, radius:14, rotZ:-4.1, cx:  -80, cy:  145 },
+  { keyword: "honey",    src: imgC2Sweet2,     x:0, y:0, w:155, h:150, radius:14, rotZ:-4.1, cx:  -80, cy:  145 },
   { keyword: "chilli",   src: imgC2Chilli,     x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
-  { keyword: "spic",     src: imgC2Chilli,     x:0, y:0, w:130, h:158, radius:14, rotZ: 3.5, cx: -140, cy:  -50 },
   { keyword: "grapefru", src: imgC2Grapefruit, x:0, y:0, w:148, h:148, radius:14, rotZ:-5.9, cx: -135, cy:  -95 },
   { keyword: "slow",     src: imgC2SlowSip,    x:0, y:0, w:155, h:155, radius:14, rotZ: 4.6, cx:  -60, cy: -155 },
-  { keyword: "sip",      src: imgC2SlowSip,    x:0, y:0, w:155, h:155, radius:14, rotZ:-2.2, cx:  110, cy:  160 },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -152,51 +150,45 @@ const STEPS: Step[] = [
   { aiText: "The bottle doesn't just set the mood.\n\nIt decides who you are tonight.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
   // 2 — bottle selector (3-drink carousel)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "bottle-select" },
-  // 3-6 — flavour questions (chat, keyword-reveal void, user responds each turn)
+  // 3-5 — flavour questions (chat, keyword-reveal void, user responds each turn)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat" },
-  // 7 — flavour roundup (AI-generated, ingredients fly in, speechAdvance)
+  // 6 — flavour roundup (AI-generated, ingredients fly in, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 8 — cocktail vid 2 (plays after flavour builder void, before night reveal)
+  // 7 — cocktail vid 2 (plays after flavour builder void, before night reveal)
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cocktail2", noVoice: true },
-  // 9 — cocktail reveal (AI-generated, speechAdvance)
+  // 8 — cocktail reveal (AI-generated, speechAdvance)
   { aiText: "", aiY: 85, userText: "", imgState: "keyword-reveal", guestCount: null, showTimeTile: false, showDateTile: false, view: "chat", speechAdvance: true },
-  // 10 — cart
+  // 9 — cart
   { aiText: "Here's everything you'll need. When you're ready, tap checkout.", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "cart" },
-  // 11 — apple pay
+  // 10 — apple pay
   { aiText: "", aiY: 85, userText: "", imgState: "none", guestCount: null, showTimeTile: false, showDateTile: false, view: "apple-pay", noVoice: true },
 ];
 
 // ─── Flavour conversation ─────────────────────────────────────────────────────
-const FLAVOUR_STEPS  = new Set([3, 4, 5, 6]);
-const ROUNDUP_STEP   = 7;
-const REVEAL_STEP    = 9;
+const FLAVOUR_STEPS  = new Set([3, 4, 5]);
+const ROUNDUP_STEP   = 6;
+const REVEAL_STEP    = 8;
 
 const FLAVOUR_Q1: Record<string, string> = {
   reposado:   "Solid choice.\n\nThe Reposado — golden, a little smoky, smooth finish.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
   cristalino: "Cristalino.\n\nIce-cold clarity, smooth as glass.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
   blanco:     "Blanco.\n\nBold, pure, no apology.\n\nNow tell me — what flavours do you actually enjoy?\n\nCitrus, herbal, spicy, sweet...?",
 };
-const FLAVOUR_Q2 = "A dash of agave to balance it out.\n\nNow — you want something a bit more on the citrus side?";
-const FLAVOUR_Q3 = "Grapefruit or lime — do you lean one more over the other?";
-const FLAVOUR_Q4 = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
 const FLAVOUR_Q2_FALLBACK = "Any heat in there — chilli, spice — or something cleaner?";
 const FLAVOUR_Q3_FALLBACK = "Something long and slow to sip, or short and sharp?";
-const FLAVOUR_Q4_FALLBACK = "Last one.\n\nRich and smooth, or clean and dry?";
 const ROUNDUP_FALLBACK    = "Grapefruit.\n\nAgave.\n\nA trace of chilli.\n\nBitter at the back.\n\nI've got everything I need.";
 const COCKTAIL_REVEAL_FALLBACK = "The Velvet Alibi.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
 
 // ─── AI-driven steps ─────────────────────────────────────────────────────────
-const AI_STEPS = new Set([4, 5, 6, ROUNDUP_STEP, REVEAL_STEP]);
+const AI_STEPS = new Set([4, 5, ROUNDUP_STEP, REVEAL_STEP]);
 
 function resolveAiText(stepIdx: number, selectedBottle: string | null, aiGeneratedSteps: Record<number, string>): string {
   if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
   if (stepIdx === 3) return FLAVOUR_Q1[selectedBottle ?? "reposado"] ?? FLAVOUR_Q1.reposado;
   if (stepIdx === 4) return FLAVOUR_Q2_FALLBACK;
   if (stepIdx === 5) return FLAVOUR_Q3_FALLBACK;
-  if (stepIdx === 6) return FLAVOUR_Q4_FALLBACK;
   if (stepIdx === ROUNDUP_STEP) return ROUNDUP_FALLBACK;
   if (stepIdx === REVEAL_STEP) return COCKTAIL_REVEAL_FALLBACK;
   return STEPS[stepIdx]?.aiText ?? "";
@@ -748,7 +740,7 @@ export function PartyPlannerScreen() {
         const bottle  = selectedBottleRef.current ?? "reposado";
         const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
 
-        if (step === 6) {
+        if (step === 5) {
           // Last flavour question — generate ingredient roundup + cocktail reveal in parallel
           const roundupMsgs: ConvMessage[] = [{
             role: "user",
@@ -774,7 +766,7 @@ export function PartyPlannerScreen() {
             role: "user",
             content: `[System: The guest chose ${bottle}. Their flavour answers so far: "${answers}". Ask ONE short follow-up question about their drink preferences. STRICT RULES: (1) Do NOT mention or echo any word or concept from their answers — if they said citrus, do not ask about citrus; if they said sweet, do not ask about sweet. (2) Explore a completely new angle not yet covered: heat/spice, bitterness, drink length, or finish. (3) Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
           }];
-          const fallbacks: Record<number, string> = { 4: FLAVOUR_Q2_FALLBACK, 5: FLAVOUR_Q3_FALLBACK, 6: FLAVOUR_Q4_FALLBACK };
+          const fallbacks: Record<number, string> = { 4: FLAVOUR_Q2_FALLBACK, 5: FLAVOUR_Q3_FALLBACK };
           hostChat(qMsgs).then(text => {
             // Always set — if empty use fallback; never leave an AI_STEPS step waiting forever
             setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text?.trim() || fallbacks[nextStep] }));

@@ -190,18 +190,21 @@ const FLAVOUR_Q1: Record<string, string> = {
 const FLAVOUR_Q2 = "A dash of agave to balance it out.\n\nNow — you want something a bit more on the citrus side?";
 const FLAVOUR_Q3 = "Grapefruit or lime — do you lean one more over the other?";
 const FLAVOUR_Q4 = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
+const FLAVOUR_Q2_FALLBACK = "Tell me more — are you after something crisp and sharp, or round and sweet?";
+const FLAVOUR_Q3_FALLBACK = "Any heat in there — chilli, spice — or something cleaner?";
+const FLAVOUR_Q4_FALLBACK = "Last one.\n\nSomething long and slow to sip, or short and sharp?";
 const ROUNDUP_FALLBACK    = "Grapefruit.\n\nAgave.\n\nA trace of chilli.\n\nBitter at the back.\n\nI've got everything I need.";
 const COCKTAIL_REVEAL_FALLBACK = "The Velvet Alibi.\n\nGrapefruit. Agave. Smoke at the back.\n\nThis one has edges.";
 
 // ─── AI-driven steps ─────────────────────────────────────────────────────────
-const AI_STEPS = new Set([ROUNDUP_STEP, REVEAL_STEP]);
+const AI_STEPS = new Set([4, 5, 6, ROUNDUP_STEP, REVEAL_STEP]);
 
 function resolveAiText(stepIdx: number, selectedBottle: string | null, aiGeneratedSteps: Record<number, string>): string {
   if (aiGeneratedSteps[stepIdx]) return aiGeneratedSteps[stepIdx];
   if (stepIdx === 3) return FLAVOUR_Q1[selectedBottle ?? "reposado"] ?? FLAVOUR_Q1.reposado;
-  if (stepIdx === 4) return FLAVOUR_Q2;
-  if (stepIdx === 5) return FLAVOUR_Q3;
-  if (stepIdx === 6) return FLAVOUR_Q4;
+  if (stepIdx === 4) return FLAVOUR_Q2_FALLBACK;
+  if (stepIdx === 5) return FLAVOUR_Q3_FALLBACK;
+  if (stepIdx === 6) return FLAVOUR_Q4_FALLBACK;
   if (stepIdx === ROUNDUP_STEP) return ROUNDUP_FALLBACK;
   if (stepIdx === REVEAL_STEP) return COCKTAIL_REVEAL_FALLBACK;
   return STEPS[stepIdx]?.aiText ?? "";
@@ -737,11 +740,11 @@ export function PartyPlannerScreen() {
 
       if (FLAVOUR_STEPS.has(step)) {
         flavourAnswersRef.current[step - 3] = uText;
+        const bottle  = selectedBottleRef.current ?? "reposado";
+        const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
 
         if (step === 6) {
           // Last flavour question — generate ingredient roundup + cocktail reveal in parallel
-          const bottle = selectedBottleRef.current ?? "reposado";
-          const answers = flavourAnswersRef.current.filter(Boolean).join("; ");
           const roundupMsgs: ConvMessage[] = [{
             role: "user",
             content: `[System: The guest chose ${bottle}. Their flavour answers: ${answers}. List 4-5 key cocktail ingredients. Put each ingredient on its own line. Short, specific, one word or two. Then one punchy closing line (max 6 words). No cocktail name, no brand names. Stay in character as The Host — dry, cinematic.]`,
@@ -760,6 +763,15 @@ export function PartyPlannerScreen() {
             setStep(prev => Math.min(prev + 1, STEPS.length - 1));
           });
         } else {
+          // Generate the next question in the background — avoids repeating what the user already said
+          const nextStep = step + 1;
+          const qMsgs: ConvMessage[] = [{
+            role: "user",
+            content: `[System: The guest chose ${bottle}. So far their flavour answers: ${answers}. Ask ONE short follow-up question about their drink preferences. Do NOT ask about or mention any flavours they already said. Explore a different angle: depth within a category, heat/spice, sweetness vs bitterness, drink length, or finish. Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
+          }];
+          hostChat(qMsgs).then(text => {
+            if (text?.trim()) setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text.trim() }));
+          });
           advanceTimerRef.current = setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 520);
         }
         return;
@@ -1001,7 +1013,11 @@ export function PartyPlannerScreen() {
         {!isThinking && aiDisplay && !isBottleSelect && !isPaymentView && !introActive && !videoActive && !nameActive && !occasionActive && !infoGatherActive && (
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: 320, textAlign: "center", zIndex: 20 }}
+            style={{ position: "absolute", left: "50%",
+              ...(current.imgState === "keyword-reveal"
+                ? { top: 88, transform: "translateX(-50%)" }
+                : { top: "50%", transform: "translate(-50%, -50%)" }),
+              width: 300, textAlign: "center", zIndex: 20 }}
           >
             <p style={{ fontFamily: "Spectral, serif", fontWeight: current.fontVariant === "semibold-italic" ? 600 : 400, fontStyle: current.fontVariant === "semibold-italic" ? "italic" : "normal", fontSize: 24, color: "white", lineHeight: 1.15, letterSpacing: current.fontVariant === "semibold-italic" ? -0.48 : 0, margin: 0, whiteSpace: "pre-wrap" }}>
               <BlurText text={aiDisplay} isTyping={isAiTyping} />

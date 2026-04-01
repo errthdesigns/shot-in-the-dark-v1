@@ -123,10 +123,15 @@ const COCKTAIL_DEFS: IngredientDef[] = [
   { keyword: "raspberry",  src: imgDrinkA,               x:0, y:0, w:150, h:165, radius:14, rotZ: 5.8, cx:  120, cy:  -85 },
   { keyword: "lemon",      src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ:-3.1, cx:  -30, cy: -175 },
   { keyword: "citrus",     src: imgCocktailLemon,         x:0, y:0, w:140, h:140, radius:70, rotZ: 4.3, cx:  145, cy: -120 },
+  { keyword: "citr",       src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ: 2.7, cx:   75, cy:  -35 },
+  { keyword: "citru",      src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ:-5.1, cx:  -70, cy:  115 },
   { keyword: "grapefruit", src: imgCocktailGrapefruit,   x:0, y:0, w:138, h:138, radius:69, rotZ:-5.9, cx: -135, cy:  -95 },
   { keyword: "lime",       src: imgCocktailLime,          x:0, y:0, w:132, h:132, radius:66, rotZ: 4.1, cx:   60, cy:  170 },
   { keyword: "chilli",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 3.8, cx:  -80, cy:  160 },
   { keyword: "spic",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-6.2, cx:  130, cy:   95 },
+  { keyword: "heat",       src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 5.5, cx:  -30, cy:   70 },
+  { keyword: "pepper",     src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ:-3.3, cx:  100, cy: -155 },
+  { keyword: "chili",      src: imgCocktailChilli,        x:0, y:0, w:130, h:158, radius:14, rotZ: 7.1, cx: -120, cy:  130 },
   { keyword: "honey",      src: imgCocktailHoney,         x:0, y:0, w:130, h:145, radius:14, rotZ: 3.7, cx: -150, cy:   45 },
   { keyword: "mint",       src: imgCocktailMint,          x:0, y:0, w:155, h:135, radius:14, rotZ:-3.9, cx:  100, cy: -170 },
   { keyword: "sweet",      src: imgCocktailSweet,         x:0, y:0, w:155, h:150, radius:14, rotZ: 5.2, cx:   50, cy: -100 },
@@ -620,7 +625,7 @@ export function PartyPlannerScreen() {
     return clearThink;
   }, [step, introActive, videoActive, nameActive, occasionActive, infoGatherActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When cocktail reveal text arrives, kick off typing
+  // When AI text arrives for an AI_STEPS step, kick off typing
   useEffect(() => {
     if (!AI_STEPS.has(step)) return;
     if (!aiGeneratedSteps[step]) return;
@@ -628,6 +633,20 @@ export function PartyPlannerScreen() {
     thinkTimerRef.current = setTimeout(() => setPhase("ai_typing"), 600);
     return clearThink;
   }, [aiGeneratedSteps, step, phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Safety net: if an AI step is stuck thinking for 7s, inject the fallback text
+  useEffect(() => {
+    if (!AI_STEPS.has(step)) return;
+    if (aiGeneratedSteps[step]) return;
+    if (phase !== "thinking") return;
+    const id = setTimeout(() => {
+      setAiGeneratedSteps(prev => {
+        if (prev[step]) return prev; // already arrived, skip
+        return { ...prev, [step]: resolveAiText(step, selectedBottle, {}) };
+      });
+    }, 7000);
+    return () => clearTimeout(id);
+  }, [step, phase, aiGeneratedSteps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // When bottle is selected, kick off typing on step 3
   useEffect(() => {
@@ -754,13 +773,13 @@ export function PartyPlannerScreen() {
             content: `[System: The guest chose ${bottle}. Their flavour answers: ${answers}. Name their cocktail. First line: just the cocktail name. Then 2-3 short atmospheric lines. No product names or brand mentions. Stay in character as The Host — dry, cinematic.]`,
           }];
           Promise.all([hostChat(roundupMsgs), hostChat(revealMsgs)]).then(([roundup, reveal]) => {
-            if (cancelled) return;
+            // Always store AI text (never block on cancelled — these steps need text to proceed)
             setAiGeneratedSteps(prev => ({
               ...prev,
               [ROUNDUP_STEP]: roundup || ROUNDUP_FALLBACK,
               [REVEAL_STEP]:  reveal  || COCKTAIL_REVEAL_FALLBACK,
             }));
-            setStep(prev => Math.min(prev + 1, STEPS.length - 1));
+            if (!cancelled) setStep(prev => Math.min(prev + 1, STEPS.length - 1));
           });
         } else {
           // Generate the next question in the background — avoids repeating what the user already said
@@ -769,8 +788,10 @@ export function PartyPlannerScreen() {
             role: "user",
             content: `[System: The guest chose ${bottle}. So far their flavour answers: ${answers}. Ask ONE short follow-up question about their drink preferences. Do NOT ask about or mention any flavours they already said. Explore a different angle: depth within a category, heat/spice, sweetness vs bitterness, drink length, or finish. Max 2 short sentences. Dry, cinematic. Stay in character as The Host.]`,
           }];
+          const fallbacks: Record<number, string> = { 4: FLAVOUR_Q2_FALLBACK, 5: FLAVOUR_Q3_FALLBACK, 6: FLAVOUR_Q4_FALLBACK };
           hostChat(qMsgs).then(text => {
-            if (text?.trim()) setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text.trim() }));
+            // Always set — if empty use fallback; never leave an AI_STEPS step waiting forever
+            setAiGeneratedSteps(prev => ({ ...prev, [nextStep]: text?.trim() || fallbacks[nextStep] }));
           });
           advanceTimerRef.current = setTimeout(() => setStep(s => Math.min(s + 1, STEPS.length - 1)), 520);
         }
@@ -1014,7 +1035,7 @@ export function PartyPlannerScreen() {
           <motion.div key={`ai-${step}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
             style={{ position: "absolute", left: "50%",
-              ...(current.imgState === "keyword-reveal"
+              ...(current.imgState === "keyword-reveal" && revealedKeywords.size > 0
                 ? { top: 88, transform: "translateX(-50%)" }
                 : { top: "50%", transform: "translate(-50%, -50%)" }),
               width: 300, textAlign: "center", zIndex: 20 }}

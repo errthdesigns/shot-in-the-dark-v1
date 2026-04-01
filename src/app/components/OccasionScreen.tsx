@@ -12,22 +12,7 @@ React to what the guest just told you. Make it feel inevitable.
 Example: "A birthday. Good. Someone always takes that personally by the end of the night."`;
 
 // ── Hardcoded beat scripts ────────────────────────────────────────────────────
-const BEAT_1 =
-  "Before we begin — what's the occasion?\n\nBirthday? Someone's finally leaving a job they hate? Or are you just looking for an excuse to make your friends feel guilty about something?";
-
-const BEAT_2_QUESTION =
-  "Now — tell me about the group.\n\nWho's the loud one? Who overthinks everything? And who, if you're being honest, already looks like they've done something wrong?";
-
-const BEAT_3_QUESTION =
-  "What are people planning to wear?\n\nAnd don't say 'whatever.' Someone always shows up in something dramatic without meaning to.";
-
-const BEAT_3_VAGUE =
-  "Go check if anyone owns a cane.\n\nOr goblets. Actual ones. You'd be surprised what changes when someone's holding a goblet.";
-
-const BEAT_4_CLOSE =
-  "Good. I have enough to work with.\n\nYou'll get your characters, your costumes, and your killer.\n\nI just need a few more details from you first — and then we begin.";
-
-const COSTUME_KEYWORDS = /dress|blazer|coat|jacket|hat|cane|goblet|suit|gown|velvet|sequin|fur|feather|tux|heels|boots|cape|gloves|tiara/i;
+const BEAT_1 = "What kind of night did you have in mind?\n\nA birthday, an excuse for some great tequila, or you just have a killer outfit that needs a showtime...";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 async function getReaction(userText: string): Promise<string> {
@@ -46,29 +31,12 @@ async function getReaction(userText: string): Promise<string> {
   return `${userText.charAt(0).toUpperCase() + userText.slice(0, 30)}. Good. I can work with that.`;
 }
 
-async function getRoleAssignment(userText: string): Promise<string> {
-  const msgs: ConvMessage[] = [{
-    role: "user",
-    content: `Guest mentioned this clothing/prop: "${userText}". Assign ONE murder mystery character. Format exactly: "[Item]. [They're] the [Character]. That's not a suggestion." Max 12 words.`,
-  }];
-  const raw = (await hostChat(msgs, undefined, REACT_SYSTEM))?.trim();
-  if (raw) return raw;
-
-  // Fallback role assignments
-  const lower = userText.toLowerCase();
-  if (/sequin|sparkl|glitter/.test(lower)) return "A sequined dress. She's the Heiress. That's not a suggestion.";
-  if (/velvet|blazer|suit/.test(lower))   return "A velvet blazer. He's the Detective. Obviously.";
-  if (/fur|coat/.test(lower))             return "A fur coat. She's the Countess. It was always going to be her.";
-  if (/hat|cap/.test(lower))              return "A dramatic hat. That's the Colonel. Decided.";
-  return "Whatever they show up in — I'll make it work.";
-}
-
 // ── Component ────────────────────────────────────────────────────────────────
 type OPhase = "idle" | "ai_speaking" | "ready" | "recording" | "thinking";
 
 interface Props {
   playerName: string;
-  onComplete: (history: ConvMessage[]) => void;
+  onComplete: () => void;
 }
 
 function MicIcon({ color = "white" }: { color?: string }) {
@@ -118,7 +86,6 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
   const historyRef    = useRef<ConvMessage[]>([]);
   const pendingAiRef  = useRef<string>("");
   const mountedRef    = useRef(true);
-  const userTurnCount = useRef(0);
   const isDoneRef     = useRef(false);
   const recognitionRef     = useRef<any>(null);
   const voiceTranscriptRef = useRef<string>("");
@@ -138,7 +105,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Typewriter + TTS ──────────────────────────────────────────────────────
+  // ── Typewriter + TTS — starts when audio actually begins playing ──────────
   useEffect(() => {
     if (phase !== "ai_speaking") return;
     let cancelled = false;
@@ -146,15 +113,10 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     if (!text) return;
 
     setIsTyping(true);
-
     const isLast = isDoneRef.current;
-    const sp = speakText(text);
-    if (isLast) {
-      sp.then(() => { if (!cancelled && mountedRef.current) onComplete(historyRef.current); });
-    }
-
     const finalDisplay = text.split("\n\n").map(p => p.trim()).filter(Boolean).pop() ?? text;
 
+    let tickTimer: ReturnType<typeof setTimeout> | null = null;
     let i = 0;
     const tick = () => {
       if (cancelled) return;
@@ -165,61 +127,51 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
       if (chunk.trim()) setAiDisplay(chunk);
       if (i < text.length) {
         const c = text[i - 1];
-        const d = c === "." || c === "?" ? 480 : c === "," ? 200 : c === "\n" ? 0 : 68 + Math.random() * 20;
-        setTimeout(tick, d);
+        const d = c === "." || c === "?" ? 320 : c === "," ? 130 : c === "\n" ? 0 : 50 + Math.random() * 12;
+        tickTimer = setTimeout(tick, d);
       } else {
         setAiDisplay(finalDisplay);
         setIsTyping(false);
         if (!isLast) {
-          setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);
+          tickTimer = setTimeout(() => { if (!cancelled && mountedRef.current) setPhase("ready"); }, 650);
         }
       }
     };
-    const t = setTimeout(tick, 50);
-    return () => { cancelled = true; clearTimeout(t); };
+
+    // Start tick only when audio begins — stays locked to voice
+    let typingStarted = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    const startTyping = () => {
+      if (typingStarted || cancelled) return;
+      typingStarted = true;
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      tickTimer = setTimeout(tick, 0);
+    };
+
+    fallbackTimer = setTimeout(startTyping, 2500); // safety net
+    const sp = speakText(text, startTyping);
+    if (isLast) {
+      sp.then(() => { if (!cancelled && mountedRef.current) onComplete(); });
+    }
+
+    return () => {
+      cancelled = true;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (tickTimer) clearTimeout(tickTimer);
+    };
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (typeInputOpen) setTimeout(() => typeInputRef.current?.focus(), 80);
   }, [typeInputOpen]);
 
-  // ── Build each beat with hardcoded script + one LLM reaction line ─────────
-  const processTurn = async (uText: string, turn: number) => {
+  // ── Single-turn: get reaction then complete ──────────────────────────────
+  const processTurn = async (uText: string) => {
     setPhase("thinking");
-    const userMsg: ConvMessage = { role: "user", content: uText };
-    let reply = "";
-
-    if (turn === 1) {
-      // Beat 2: react to occasion + hardcoded group question
-      const reaction = await getReaction(uText);
-      if (!mountedRef.current) return;
-      reply = reaction
-        ? `${reaction}\n\n${BEAT_2_QUESTION}`
-        : BEAT_2_QUESTION;
-
-    } else if (turn === 2) {
-      // Beat 3: react to group info + hardcoded costume question
-      const reaction = await getReaction(uText);
-      if (!mountedRef.current) return;
-      reply = reaction
-        ? `${reaction}\n\n${BEAT_3_QUESTION}`
-        : BEAT_3_QUESTION;
-
-    } else {
-      // Beat 4: costume detection → role assignment or goblet line, then close
-      isDoneRef.current = true;
-      if (COSTUME_KEYWORDS.test(uText)) {
-        const roleAssignment = await getRoleAssignment(uText);
-        if (!mountedRef.current) return;
-        reply = roleAssignment
-          ? `${roleAssignment}\n\n${BEAT_4_CLOSE}`
-          : `${BEAT_3_VAGUE}\n\n${BEAT_4_CLOSE}`;
-      } else {
-        reply = `${BEAT_3_VAGUE}\n\n${BEAT_4_CLOSE}`;
-      }
-    }
-
-    historyRef.current = [...historyRef.current, userMsg, { role: "assistant", content: reply }];
+    isDoneRef.current = true;
+    const reaction = await getReaction(uText);
+    if (!mountedRef.current) return;
+    const reply = reaction || "Good. I can work with that.";
     pendingAiRef.current = reply;
     setUserDisplay("");
     setPhase("ai_speaking");
@@ -229,8 +181,7 @@ export function OccasionScreen({ playerName, onComplete }: Props) {
     if (!uText.trim()) { setPhase("ready"); return; }
     setUserDisplay(uText);
     setLiveTranscript("");
-    userTurnCount.current += 1;
-    processTurn(uText, userTurnCount.current);
+    processTurn(uText);
   };
 
   // ── Voice ─────────────────────────────────────────────────────────────────

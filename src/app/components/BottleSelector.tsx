@@ -1,36 +1,24 @@
 import { useState, useRef } from "react";
-import imgCristalino from "../../assets/cristalino_bottle.png";
-import imgReposado   from "../../assets/resposado_bottle.png";
-import imgBlanco     from "../../assets/blanco_bottle.png";
+import { motion, AnimatePresence } from "motion/react";
+import imgCristalino from "../../assets/don cristalino.png";
+import imgReposado   from "../../assets/don 1.png";
+import imgBlanco     from "../../assets/don blanco.png";
 
-// Only reposado is available in this demo
 const SELECTABLE_ID = "reposado";
 
 export interface BottleData {
   id: string;
   name: string;
-  brand: string;
+  mood: string;
 }
 
 export const BOTTLES: BottleData[] = [
-  {
-    id:       "cristalino",
-    name:     "70 Cristalino",
-    brand:    "Don Julio",
-  },
-  {
-    id:       "reposado",
-    name:     "Reposado",
-    brand:    "Don Julio",
-  },
-  {
-    id:       "blanco",
-    name:     "Blanco",
-    brand:    "Don Julio",
-  },
+  { id: "cristalino", name: "Cristalino",  mood: "1920's Masquerade" },
+  { id: "reposado",   name: "Reposado",    mood: "Western Noir"      },
+  { id: "blanco",     name: "Blanco",      mood: "White Lotus"       },
 ];
 
-const GIF_MAP: Record<string, string> = {
+const IMG_MAP: Record<string, string> = {
   cristalino: imgCristalino,
   reposado:   imgReposado,
   blanco:     imgBlanco,
@@ -41,10 +29,10 @@ interface Props {
 }
 
 export function BottleSelector({ onSelect }: Props) {
-  const [activePage, setActivePage] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  // Track scroll position at pointer-down to distinguish swipe from tap
-  const pointerDownScrollX = useRef(0);
+  const [activePage, setActivePage]   = useState(0);
+  const [breaking, setBreaking]       = useState(false);
+  const scrollRef                     = useRef<HTMLDivElement>(null);
+  const pointerDownScrollX            = useRef(0);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -57,12 +45,12 @@ export function BottleSelector({ onSelect }: Props) {
   };
 
   const handleCardClick = (bottleId: string) => {
-    // If scroll moved more than 5px since pointer-down, it was a swipe — ignore
     const scrolled = Math.abs((scrollRef.current?.scrollLeft ?? 0) - pointerDownScrollX.current);
     if (scrolled > 5) return;
-    // Only the selectable bottle triggers onSelect
     if (bottleId !== SELECTABLE_ID) return;
-    onSelect(bottleId);
+    // Flash-break transition: white flash, then advance
+    setBreaking(true);
+    setTimeout(() => onSelect(bottleId), 520);
   };
 
   return (
@@ -99,15 +87,35 @@ export function BottleSelector({ onSelect }: Props) {
                 cursor: selectable ? "pointer" : "default",
               }}
             >
-              {/* GIF background */}
+              {/* Full-bleed image */}
               <img
-                src={GIF_MAP[bottle.id]}
+                src={IMG_MAP[bottle.id]}
                 alt={bottle.name}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }}
               />
 
+              {/* Bottom gradient */}
+              <div style={{
+                position: "absolute", inset: 0, pointerEvents: "none",
+                background: "linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.82) 100%)",
+              }} />
 
-
+              {/* Name + mood — bottom of card */}
+              <div style={{ position: "absolute", bottom: 108, left: 0, right: 0, textAlign: "center", pointerEvents: "none" }}>
+                <p style={{
+                  fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 10,
+                  color: "rgba(255,255,255,0.5)", letterSpacing: 4, textTransform: "uppercase",
+                  margin: "0 0 8px",
+                }}>
+                  {bottle.mood}
+                </p>
+                <p style={{
+                  fontFamily: "Spectral, serif", fontWeight: 400, fontStyle: "italic",
+                  fontSize: 36, color: "white", letterSpacing: -0.5, margin: 0, lineHeight: 1,
+                }}>
+                  {bottle.name}
+                </p>
+              </div>
             </div>
           );
         })}
@@ -115,31 +123,33 @@ export function BottleSelector({ onSelect }: Props) {
 
       {/* ── Page dots ── */}
       <div style={{
-        position: "absolute",
-        bottom: 72,
-        left: 0, right: 0,
-        display: "flex",
-        justifyContent: "center",
-        gap: 8,
-        pointerEvents: "none",
+        position: "absolute", bottom: 72, left: 0, right: 0,
+        display: "flex", justifyContent: "center", gap: 8, pointerEvents: "none",
       }}>
         {BOTTLES.map((_, i) => (
-          <div
-            key={i}
-            style={{
-              width: i === activePage ? 18 : 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
-              transition: "all 0.25s ease",
-            }}
-          />
+          <div key={i} style={{
+            width: i === activePage ? 18 : 6, height: 6, borderRadius: 3,
+            backgroundColor: i === activePage ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.28)",
+            transition: "all 0.25s ease",
+          }} />
         ))}
       </div>
 
-      <style>{`
-        div::-webkit-scrollbar { display: none; }
-      `}</style>
+      {/* ── Break flash — white flare on select ── */}
+      <AnimatePresence>
+        {breaking && (
+          <motion.div
+            key="break-flash"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45, ease: "easeIn" }}
+            style={{ position: "absolute", inset: 0, backgroundColor: "white", pointerEvents: "none", zIndex: 100 }}
+          />
+        )}
+      </AnimatePresence>
+
+      <style>{`div::-webkit-scrollbar { display: none; }`}</style>
     </div>
   );
 }

@@ -28,7 +28,7 @@ async function getReaction(userText: string): Promise<string> {
   if (/anniversary/.test(lower))          return "An anniversary. Good. The ones who've lasted always have something to prove.";
   if (/celebration|celebrate/.test(lower)) return "A celebration. Good. The best nights always start with an excuse.";
   if (/casual|chill|hangout/.test(lower)) return "A casual night. Sure. Those are the ones that go sideways.";
-  return `${userText.charAt(0).toUpperCase() + userText.slice(0, 30)}. Good. I can work with that.`;
+  return `${userText.charAt(0).toUpperCase() + userText.slice(1)}. Good. I can work with that.`;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

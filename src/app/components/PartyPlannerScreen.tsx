@@ -512,7 +512,7 @@ export function PartyPlannerScreen() {
 
   const currentGalleryImages =
     current.imgState === "gatsby-reveal"  ? GATSBY_COMBINED :
-    current.imgState === "keyword-reveal" ? COCKTAIL_GALLERY :
+    current.imgState === "keyword-reveal" ? [] :
     PARTY_IMAGES;
 
   // Memoized so array reference stays stable — AutoGallery RAF effect depends on images
@@ -769,7 +769,10 @@ export function PartyPlannerScreen() {
   useEffect(() => {
     if (current.imgState !== "keyword-reveal") return;
     const defsToCheck = FLAVOUR_STEPS.has(step) || step === REVEAL_STEP ? COCKTAIL_DEFS : WESTERN_DEFS;
-    const combined = aiDisplay.toLowerCase() + " " + userDisplay.toLowerCase();
+    // Flavour steps: only reveal images from what the user says, not AI text
+    const combined = FLAVOUR_STEPS.has(step)
+      ? userDisplay.toLowerCase()
+      : aiDisplay.toLowerCase() + " " + userDisplay.toLowerCase();
     setRevealedKeywords((prev) => {
       let changed = false;
       const next = new Set(prev);

@@ -1,10 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { speakText, stopSpeech } from "../services/elevenlabs";
 import { motion, AnimatePresence } from "motion/react";
 import imgCristalino from "../../assets/don cristalino.png";
 import imgReposado   from "../../assets/don 1.png";
 import imgBlanco     from "../../assets/don blanco.png";
 
 const SELECTABLE_ID = "reposado";
+
+const BOTTLE_LINES: Record<string, string> = {
+  cristalino: "Cristalino. Triple filtered, crystal clear. The one you pour when you want the room to notice.",
+  reposado:   "Reposado. Aged in oak. Golden, a little smoky, smooth finish. This is the one.",
+  blanco:     "Blanco. Raw, bold, nothing to hide. Pure Don Julio — no apology.",
+};
 
 export interface BottleData {
   id: string;
@@ -33,6 +40,13 @@ export function BottleSelector({ onSelect }: Props) {
   const [breaking, setBreaking]       = useState(false);
   const scrollRef                     = useRef<HTMLDivElement>(null);
   const pointerDownScrollX            = useRef(0);
+
+  // Speak bottle description whenever the active page changes
+  useEffect(() => {
+    stopSpeech();
+    const id = setTimeout(() => speakText(BOTTLE_LINES[BOTTLES[activePage].id]), 400);
+    return () => clearTimeout(id);
+  }, [activePage]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
